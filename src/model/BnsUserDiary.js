@@ -7,14 +7,19 @@ const taskSchema = new mongoose.Schema(
       content: { type: String, default: "" },
       imageUrl: { type: String, default: "" },
     },
-    completed: { type: Boolean, default: false }, // optional but recommended
+    completed: { type: Boolean, default: false },
   },
   { _id: false }
 );
 
 const bnsUserDiarySchema = new mongoose.Schema({
-  userId: { type: String, required: true },
+  userId: { type: String, required: true, ref: 'BnsUser' }, // Added ref for population
   date: { type: String, required: true }, // YYYY-MM-DD
+  
+  // New Fields for Attendance
+  timeIn: { type: Date },
+  timeOut: { type: Date },
+  
   diary: {
     title: { type: String, default: "" },
     content: { type: String, default: "" },
@@ -33,7 +38,6 @@ const bnsUserDiarySchema = new mongoose.Schema({
   updatedAt: { type: Number, default: () => Date.now() },
 });
 
-// Ensure only one diary per user per day
 bnsUserDiarySchema.index({ userId: 1, date: 1 }, { unique: true });
 
 export default mongoose.models.BnsUserDiary ||

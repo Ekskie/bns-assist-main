@@ -8,12 +8,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import UserAccount from "@/components/bnsUser/nav-components/UserAccount";
 import { format } from "date-fns";
+
 export default function SuperAdminLayout({ children }) {
   const { type, name, id, imgUrl } = useAuth();
 
   const router = useRouter();
   const [notifOpen, setnotifOpen] = useState(false);
   const [userAccountOpen, setuserAccountOpen] = useState(false);
+  // Add mounted state to fix hydration error
+  const [isMounted, setIsMounted] = useState(false);
+
   const [systemNotifications, setSystemNotifications] = useState([
     {
       id: "1",
@@ -46,13 +50,13 @@ export default function SuperAdminLayout({ children }) {
       createdAt: new Date("2025-06-16"),
     },
     {
-      id: "5",
+      id: "6",
       title: "New Feature Released",
       message: "Chat support is now available for all users.",
       createdAt: new Date("2025-06-16"),
     },
     {
-      id: "5",
+      id: "7",
       title: "New Feature Released",
       message: "Chat support is now available for all users.",
       createdAt: new Date("2025-06-16"),
@@ -74,6 +78,9 @@ export default function SuperAdminLayout({ children }) {
     setEditMode(false);
   };
   useEffect(() => {
+    // Set mounted to true after initial client render
+    setIsMounted(true);
+
     if (type !== "bns-admin") {
       if (type === "bns-worker") {
         router.replace("/bnsUser");
@@ -131,14 +138,14 @@ export default function SuperAdminLayout({ children }) {
             <div className="flex items-center gap-6">
               {/* Notification Bell */}
               {/* <div
-								className="relative"
-								onClick={() =>
-									document.getElementById("notificationModal").showModal()
-								}
-							>
-								<Bell className="w-5 h-5 text-gray-700" />
-								<span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
-							</div> */}
+                className="relative"
+                onClick={() =>
+                  document.getElementById("notificationModal").showModal()
+                }
+              >
+                <Bell className="w-5 h-5 text-gray-700" />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+              </div> */}
 
               {/* <div
                 onClick={() =>
@@ -151,7 +158,10 @@ export default function SuperAdminLayout({ children }) {
               {/* User Info */}
               <div className="flex items-center gap-3">
                 <div className="leading-tight text-sm">
-                  <div className="font-semibold text-gray-900">{name}</div>
+                  {/* Hydration fix: Only display name if mounted */}
+                  <div className="font-semibold text-gray-900">
+                    {isMounted ? name || "User" : ""}
+                  </div>
                   <div className="text-gray-500 text-xs">Bns-Admin</div>
                 </div>
                 <div
@@ -164,7 +174,8 @@ export default function SuperAdminLayout({ children }) {
                   <UserAccount userAccountOpen={userAccountOpen} />
 
                   <div className="w-full h-full rounded-full flex justify-center items-center text-xl">
-                    {getInitials(name)}
+                    {/* Hydration fix: Only display initials if mounted */}
+                    {isMounted ? getInitials(name) : ""}
                   </div>
                 </div>
               </div>
@@ -218,7 +229,8 @@ export default function SuperAdminLayout({ children }) {
                       >
                         <p className="font-semibold">{notif.title}</p>
                         <p className="text-sm text-gray-500">
-                          {format(notif.createdAt, "PPpp")}
+                          {/* Hydration fix: Only format date if mounted to prevent server/client timezone mismatch */}
+                          {isMounted ? format(notif.createdAt, "PPpp") : ""}
                         </p>
                       </div>
                     ))

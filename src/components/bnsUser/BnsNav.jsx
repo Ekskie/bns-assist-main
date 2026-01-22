@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
@@ -8,13 +8,17 @@ import useAuth from "@/hooks/useAuth";
 
 const BnsNav = () => {
   const pathname = usePathname();
-
   const { name, barangay } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   console.log(pathname);
 
   const linkClasses = (path) =>
-    `w-full py-2 px-4 rounded-md text-[14px] flex justify-start items-center gap-3 duration-200
+    `w-full py-2 px-4 rounded-md text-[14px] flex justify-start items-center gap-3 duration-200 
     ${
       pathname === path
         ? "bg-[#4CAF50] text-white"
@@ -22,12 +26,16 @@ const BnsNav = () => {
     }`;
 
   const linkClassesWithNestedRoute = (path) =>
-    `w-full py-2 px-4 rounded-md text-[14px] flex justify-start items-center gap-3 duration-200
+    `w-full py-2 px-4 rounded-md text-[14px] flex justify-start items-center gap-3 duration-200 
         ${
           pathname.startsWith(path)
             ? "bg-[#4CAF50] text-white"
             : "bg-transparent text-[#64748b] hover:bg-[#E1F1E1] hover:text-black"
         }`;
+
+  // If not mounted, you can render a skeleton or just return the structure with empty user data
+  // to match server HTML as closely as possible, or just render nothing for the user part.
+  // Here we'll use empty strings during SSR to avoid mismatch if useAuth returns undefined initially.
 
   return (
     <div className="h-full flex  flex-col justify-between w-[255px] min-w-[255px] bg-[#F2F8F2]">
@@ -43,11 +51,11 @@ const BnsNav = () => {
         <div className="w-full flex flex-col justify-center items-start p-4 border-b border-gray-200">
           <h5 className="text-[14px] text-[#64748b] mb-1">User</h5>
           <h1 className="font-medium text-bns-primary text-[16px]  ">
-            {name ? name : "User Not Found"}
+            {mounted && name ? name : "User Not Found"}
           </h1>
 
           <h5 className="text-[12px] text-[#64748b]">
-            BNS • {barangay ? barangay : "Undefined Barangay"}
+            BNS • {mounted && barangay ? barangay : "Undefined Barangay"}
           </h5>
         </div>
 
@@ -70,7 +78,7 @@ const BnsNav = () => {
             href={"/bnsUser/voiceReport"}
             className={linkClassesWithNestedRoute("/bnsUser/voiceReport")}
           >
-            <i class="bi bi-file-earmark-arrow-down"></i>Nutrition Forms
+            <i className="bi bi-file-earmark-arrow-down"></i>Nutrition Forms
           </Link>
           <h4 className="text-[12px] text-[#64748b] font-medium my-2">
             Beneficiary
