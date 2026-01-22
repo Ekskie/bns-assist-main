@@ -126,7 +126,7 @@ export default function UserAccessRequests() {
 						<div className="flex justify-between items-center mb-4">
 							<div>
 								<h2 className="text-xl font-bold text-gray-800">
-									List of BNS Users
+									List of admin BNS Users
 								</h2>
 							</div>
 							<div className="flex items-center gap-2">

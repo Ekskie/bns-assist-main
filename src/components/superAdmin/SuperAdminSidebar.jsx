@@ -46,19 +46,19 @@ export default function SuperAdminSidebar() {
       icon: <LayoutDashboard size={20} />,
     },
     {
-      name: "User Approvals",
-      path: "/superAdmin/approvals",
-      icon: <CheckSquare size={20} />,
-    },
-    {
-      name: "BNS Users",
+      name: "All BNS Users",
       path: "/superAdmin/users",
       icon: <Users size={20} />,
     },
     {
+      name: "User Approvals",
+      path: "/superAdmin/approvals",
+      icon: <UserCheck size={20} />,
+    },
+    {
       name: "Beneficiaries",
       path: "/superAdmin/beneficiaryApprovals",
-      icon: <ClipboardList size={20} />, // Changed icon to distinguish
+      icon: <ClipboardList size={20} />, 
     },
     {
       name: "Daily Diary",
@@ -93,9 +93,9 @@ export default function SuperAdminSidebar() {
         {/* Top header & toggle */}
         <div className="flex items-center justify-between mb-6">
           <div className={clsx("flex items-center gap-2 overflow-hidden transition-all", isSidebarOpen ? "w-auto" : "w-0")}>
-             <FileBarChart size={24} className="shrink-0" />
+             {/* <FileBarChart size={24} className="shrink-0" /> */}
              <div className="text-xl font-bold whitespace-nowrap">
-              BNS ASSIST
+               BNS ASSIST
              </div>
           </div>
           <button

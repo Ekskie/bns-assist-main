@@ -96,10 +96,9 @@ export const authtApiSlice = api.injectEndpoints({
             async onQueryStarted(arg, { dispatch, queryFulfilled }) {
                 try {
                     await queryFulfilled;
-                    // You might want to clear local state here or in the component
-                    // dispatch(logOut()); 
+                    // Force redirect or clear state here if needed
                     setTimeout(() => {
-                        window.location.href = "/login"; // Force redirect on success
+                        window.location.href = "/login"; 
                     }, 100);
                 } catch (err) {
                     console.log(err);
@@ -119,5 +118,5 @@ export const {
     useLoginAdminMutation,
     useLoginBeneciaryMutation,
     useApproveAndRejectBnsUserMutation,
-    useSendLogoutMutation, // Export the hook
+    useSendLogoutMutation, // 🔹 Export the hook
 } = authtApiSlice;

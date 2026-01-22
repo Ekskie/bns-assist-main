@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import Request from "@/model/Request";
+import BnsUser from "@/model/BnsUser"; // Import BnsUser for population
 import connectToDatabase from "@/lib/mongoose";
 
 export async function GET(req) {
   await connectToDatabase();
   try {
-    const reqRequest = await Request.find({});
-    return NextResponse.json(reqRequest, { status: 200 });
+    // Populate 'requestedBy' to get user details (fullName, barangay)
+    const reqRequest = await Request.find({})
+      .populate("requestedBy", "fullName barangay") 
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({ data: reqRequest }, { status: 200 }); 
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch reqRequest" },

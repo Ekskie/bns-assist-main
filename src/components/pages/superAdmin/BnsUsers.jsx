@@ -23,7 +23,7 @@ export default function SuperAdminBnsUsersPage() {
 	return (
 		<div className="text-black">
 			<div className="">
-				<p className="text-2xl font-bold">BNS Users</p>
+				<p className="text-2xl font-bold">ALL BNS Users</p>
 				<p className="text-gray-500">
 					Manage all Barangay Nutrition Scholar (BNS) users in the system.
 				</p>
