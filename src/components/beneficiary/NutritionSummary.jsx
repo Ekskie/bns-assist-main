@@ -172,70 +172,94 @@ export default function NutritionSummary() {
 
   /*WEIGHT CHECKING */
 
-  const healthStatus = (birthDateStr, weight, bpString, muac) => {
-    // Parse blood pressure
-    const systolicBP = bpString?.split("/").map(Number)[0];
-    const diastolicBP = bpString?.split("/").map(Number)[1];
+const healthStatus = (birthDateStr, weight, bpString, muac) => {
+if (!birthDateStr || typeof birthDateStr !== "string") {
+return {
+age: null,
+weightStatus: "Unknown",
+bpStatus: "Unknown",
+muacStatus: "Unknown",
+};
+}
 
-    // Parse birthdate (DD-MM-YYYY)
-    const [day, month, year] = birthDateStr?.split("-").map(Number);
-    const birthDate = new Date(year, month - 1, day);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate?.getFullYear();
-    const monthDiff = today.getMonth() - birthDate?.getMonth();
-    if (
-      monthDiff < 0 ||
-      (monthDiff === 0 && today.getDate() < birthDate?.getDate())
-    ) {
-      age--;
-    }
 
-    // Determine normal weight range by age
-    let minNormalWeight, maxNormalWeight;
-    if (age >= 18 && age <= 24) {
-      minNormalWeight = 50;
-      maxNormalWeight = 70;
-    } else if (age >= 25 && age <= 34) {
-      minNormalWeight = 55;
-      maxNormalWeight = 75;
-    } else if (age >= 35 && age <= 50) {
-      minNormalWeight = 60;
-      maxNormalWeight = 80;
-    } else {
-      minNormalWeight = 50;
-      maxNormalWeight = 85;
-    }
+// Parse birthdate (DD-MM-YYYY)
+const parts = birthDateStr.split("-").map(Number);
+if (parts.length !== 3 || parts.some(isNaN)) {
+return {
+age: null,
+weightStatus: "Invalid birth date",
+bpStatus: "Unknown",
+muacStatus: "Unknown",
+};
+}
 
-    const weightStatus =
-      weight < minNormalWeight
-        ? "Underweight"
-        : weight > maxNormalWeight
-        ? "Overweight"
-        : "Normal weight";
 
-    const bpStatus =
-      systolicBP < 90 || diastolicBP < 60
-        ? "Low BP"
-        : systolicBP <= 120 && diastolicBP <= 80
-        ? "Normal BP"
-        : systolicBP <= 139 || diastolicBP <= 89
-        ? "Elevated BP"
-        : "High BP";
+const [day, month, year] = parts;
+const birthDate = new Date(year, month - 1, day);
 
-    const muacStatus =
-      muac < 23
-        ? "Possible undernutrition"
-        : muac <= 32
-        ? "Normal MUAC"
-        : "Possible overweight/obese ";
 
-    return {
-      age,
-      weightStatus,
-      bpStatus,
-      muacStatus,
-    };
-  };
+const today = new Date();
+let age = today.getFullYear() - birthDate.getFullYear();
+const monthDiff = today.getMonth() - birthDate.getMonth();
+
+
+if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+age--;
+}
+
+
+// Parse blood pressure safely
+const [systolicBP, diastolicBP] = bpString?.split("/").map(Number) || [];
+
+
+// Weight range logic
+let minNormalWeight = 50;
+let maxNormalWeight = 85;
+
+
+if (age >= 18 && age <= 24) {
+minNormalWeight = 50;
+maxNormalWeight = 70;
+} else if (age >= 25 && age <= 34) {
+minNormalWeight = 55;
+maxNormalWeight = 75;
+} else if (age >= 35 && age <= 50) {
+minNormalWeight = 60;
+maxNormalWeight = 80;
+}
+
+
+const weightStatus =
+weight < minNormalWeight
+? "Underweight"
+: weight > maxNormalWeight
+? "Overweight"
+: "Normal weight";
+
+
+const bpStatus =
+!systolicBP || !diastolicBP
+? "Unknown BP"
+: systolicBP < 90 || diastolicBP < 60
+? "Low BP"
+: systolicBP <= 120 && diastolicBP <= 80
+? "Normal BP"
+: systolicBP <= 139 || diastolicBP <= 89
+? "Elevated BP"
+: "High BP";
+
+
+const muacStatus =
+muac < 23
+? "Possible undernutrition"
+: muac <= 32
+? "Normal MUAC"
+: "Possible overweight/obese";
+
+
+return { age, weightStatus, bpStatus, muacStatus };
+};
 
   const getAge = (birthDateStr) => {
     const birthDate = new Date(birthDateStr);

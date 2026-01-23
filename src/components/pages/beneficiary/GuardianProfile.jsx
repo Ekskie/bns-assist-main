@@ -4,44 +4,54 @@ import {
   useGetuserAccountDataQuery,
   useUpdateBeneficiaryDataMutation,
 } from "@/service/beneficiaryPortal/beneficiaryApiSlice";
-import { selectBeneficiary } from "@/service/beneficiaryPortal/beneficiaryPortalSlice";
 import {
   User,
   Phone,
   Mail,
   MapPin,
   FileEdit,
-  Save,
   SquarePen,
   Calendar,
   UserRound,
   FileText,
   Clipboard,
+  Building2 // Added icon for municipality
 } from "lucide-react";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { useSelector } from "react-redux";
 
 function GuardianProfilePage() {
-  const { type, user_type, id } = useAuth();
+  const { user_type, id } = useAuth();
 
-  /* API CALL */
-  const beneficiaryData = useGetuserAccountDataQuery({ id, user_type });
+  /* API CALL - skip if no ID */
+  const { data: beneficiaryData, isLoading, isFetching } = useGetuserAccountDataQuery(
+    { id, user_type },
+    { skip: !id || !user_type }
+  );
 
-  const [updateUser, { isSuccess, isError, error }] =
-    useUpdateBeneficiaryDataMutation();
+  const [updateUser, { isError, error }] = useUpdateBeneficiaryDataMutation();
 
-  const [editMode, setEditMode] = useState(false);
-
-  const [userData, setuserData] = useState("");
+  const [userData, setuserData] = useState({
+      name: "",
+      email: "",
+      number: "",
+      address: "",
+      municipality: "", 
+      birthDate: "",
+      ageMonths: "",
+      imgUrl: "",
+      createdAt: ""
+  });
 
   useEffect(() => {
     if (beneficiaryData?.data) {
-      setuserData(beneficiaryData?.data);
+      console.log("Guardian Profile Data:", beneficiaryData.data);
+      setuserData(beneficiaryData.data);
     }
-  }, [beneficiaryData?.data]);
+  }, [beneficiaryData]);
 
   const formateDate = (dateStr) => {
+    if (!dateStr) return "N/A";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -50,75 +60,55 @@ function GuardianProfilePage() {
     });
   };
 
-  const splitFullName = (fullName) => {
-    const parts = fullName.trim().split(/\s+/); // split by any whitespace
-    const firstName = parts[0];
-    const lastName = parts.slice(1).join(" ") || ""; // in case there's no last name
-    return { firstName, lastName };
-  };
-
   const onChangeValue = (e) => {
     const { value, name } = e.target;
-
-    console.log(value, name);
-
-    setuserData((prev) => {
-      return {
-        ...prev,
-        [name]: value,
-      };
-    });
+    setuserData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const hasChanges =
-    userData.name !== beneficiaryData?.data?.name ||
-    userData.address !== beneficiaryData?.data?.address ||
-    userData.number !== beneficiaryData?.data?.number ||
-    userData.email !== beneficiaryData?.data?.email;
+    userData?.name !== beneficiaryData?.data?.name ||
+    userData?.address !== beneficiaryData?.data?.address ||
+    userData?.number !== beneficiaryData?.data?.number ||
+    userData?.email !== beneficiaryData?.data?.email ||
+    userData?.municipality !== beneficiaryData?.data?.municipality;
 
   const updateNow = async () => {
     if (hasChanges) {
       const res = await updateUser({
-        address: userData?.address,
-        email: userData?.email,
-        name: userData?.name,
-        number: parseInt(userData?.number),
+        ...userData, 
+        number: parseInt(userData.number) || 0,
         id,
         user_type,
       });
 
-      if (res && !isError && !error) {
-        console.log({
-          address: userData?.address,
-          email: userData?.email,
-          name: userData?.name,
-          number: userData?.number,
-          id,
-          user_type,
+      if (res?.data && !isError) {
+        toast.success("Updated Data!", {
+          style: { background: "#333", color: "#fff" },
         });
-
-        console.log(res);
-
-        toast.success("Updated Data !", {
-          duration: 3000,
-          style: {
-            background: "#333",
-            color: "#fff",
-          },
-        });
-
-        window.location.reload();
       } else {
-        toast.error(error?.status, {
-          duration: 3000,
-          style: {
-            background: "#333",
-            color: "#fff",
-          },
+        toast.error(error?.data?.message || "Update Failed", {
+          style: { background: "#333", color: "#fff" },
         });
       }
     }
   };
+
+  if (isLoading || isFetching) {
+      return (
+        <div className="p-8 w-full h-full flex flex-col items-center justify-center text-gray-500">
+            <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            Loading profile information...
+        </div>
+      );
+  }
+
+  // Fallback if no data found
+  if (!isLoading && !userData?._id && !beneficiaryData?.data) {
+       return <div className="p-8 text-center text-gray-500">User profile not found.</div>;
+  }
 
   return (
     <div className="text-black">
@@ -139,70 +129,45 @@ function GuardianProfilePage() {
       <div className="p-6 bg-white my-6 rounded-2xl shadow">
         <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
           <div className="relative">
-            <div className="h-24 w-24 border-bns-primary rounded-full overflow-hidden">
-              {userData?.imgUrl ? (
-                <img
-                  src={userData?.imgUrl}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img
-                  src="/asset/default-dp.jpg"
-                  className="w-full h-full object-cover scale-[1.2]"
-                />
-              )}
+            <div className="h-24 w-24 border-bns-primary rounded-full overflow-hidden bg-gray-100">
+              <img
+                src={userData?.imgUrl || "/asset/default-dp.jpg"}
+                className="w-full h-full object-cover"
+                alt="Profile"
+                onError={(e) => { e.target.src = "/asset/default-dp.jpg"; }}
+              />
             </div>
           </div>
 
           <div className="flex-1 space-y-2 text-center md:text-left">
             <div>
-              <h2 className="text-2xl font-bold">{userData?.name}</h2>
-              <p className="text-muted-foreground">ID: {userData?._id}</p>
+              <h2 className="text-2xl font-bold">{userData?.name || "No Name"}</h2>
+              <p className="text-muted-foreground">ID: {userData?._id || "..."}</p>
             </div>
 
             <div className="flex flex-wrap gap-2 justify-center md:justify-start">
               {user_type === "children" ? (
                 <>
-                  <div
-                    variant="outline"
-                    className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                  >
+                  <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
                     Primary Guardian
                   </div>
-                  <div
-                    variant="outline"
-                    className="bg-green-50 text-green-700 hover:bg-green-100"
-                  >
+                  <div className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-medium">
                     Mother
                   </div>
-                  <div
-                    variant="outline"
-                    className="bg-purple-50 text-purple-700 hover:bg-purple-100"
-                  >
+                  <div className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
                     Active
                   </div>
                 </>
               ) : (
                 <>
-                  {user_type === "pregnant" ? (
-                    <>
-                      <div
-                        variant="outline"
-                        className="bg-blue-50 text-blue-700 hover:bg-blue-100"
-                      >
-                        Pregnant
-                      </div>
-
-                      <div
-                        variant="outline"
-                        className="bg-purple-50 text-purple-700 hover:bg-purple-100"
-                      >
-                        Active
-                      </div>
-                    </>
-                  ) : (
-                    <></>
+                  {user_type === "pregnant" && (
+                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                      Pregnant
+                    </div>
                   )}
+                  <div className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full text-xs font-medium">
+                    Active
+                  </div>
                 </>
               )}
             </div>
@@ -233,7 +198,6 @@ function GuardianProfilePage() {
           </div>
 
           <div className="space-y-4 mt-6">
-            {/*  */}
             <div className="flex w-full gap-4">
               <div className="space-y-2 w-full">
                 <label htmlFor="name" className="font-semibold ">
@@ -244,13 +208,13 @@ function GuardianProfilePage() {
                   id="name"
                   className="px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
                   name="name"
-                  placeholder="Enter Report Title"
-                  value={userData ? userData?.name : "loadng"}
-                  onChange={(e) => onChangeValue(e)}
+                  placeholder="Full Name"
+                  value={userData?.name || ""}
+                  onChange={onChangeValue}
                 />
               </div>
             </div>
-            {/*  */}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="flex items-center gap-1 font-semibold">
@@ -262,9 +226,9 @@ function GuardianProfilePage() {
                   id="number"
                   className="px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
                   name="number"
-                  placeholder="Enter Report Title"
-                  value={userData ? userData?.number : "loading"}
-                  onChange={(e) => onChangeValue(e)}
+                  placeholder="0912..."
+                  value={userData?.number || ""}
+                  onChange={onChangeValue}
                 />
               </div>
 
@@ -278,28 +242,29 @@ function GuardianProfilePage() {
                   id="email"
                   className="px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
                   name="email"
-                  placeholder="Enter Report Title"
-                  value={userData ? userData?.email : "loadng"}
-                  onChange={(e) => onChangeValue(e)}
+                  placeholder="example@gmail.com"
+                  value={userData?.email || ""}
+                  onChange={onChangeValue}
                 />
               </div>
             </div>
 
-            {/*  */}
+            {/* FIXED INPUTS BELOW */}
 
             <div className="w-full flex  gap-4">
               <div className="space-y-2 w-full">
-                <label htmlFor="municipality" className="font-semibold">
+                <label htmlFor="municipality" className="font-semibold flex items-center gap-1">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
                   Municipality
                 </label>
                 <input
                   type="text"
-                  id="reportTitle"
+                  id="municipality"
                   className="px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
-                  name="reportTitle"
-                  placeholder="Enter Report Title"
-                  value={""}
-                  /*   onChange={(e) => setTitle(e?.target?.value)} */
+                  name="municipality"
+                  placeholder="Enter Municipality"
+                  value={userData?.municipality || ""} 
+                  onChange={onChangeValue} 
                 />
               </div>
             </div>
@@ -313,18 +278,18 @@ function GuardianProfilePage() {
                 id="address"
                 className="px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
                 name="address"
-                placeholder="Enter Report Title"
-                value={userData ? userData?.address : "loadng"}
-                onChange={(e) => onChangeValue(e)}
+                placeholder="Barangay..."
+                value={userData?.address || ""}
+                onChange={onChangeValue}
               />
             </div>
 
             <button
-              variant={editMode ? "default" : "outline"}
-              className={`flex gap-2 bg-green-500 text-white py-2 px-6 rounded justify-center items-center cursor-pointer ${
-                hasChanges ? "" : "opacity-50"
+              className={`flex gap-2 bg-green-500 text-white py-2 px-6 rounded justify-center items-center cursor-pointer hover:bg-green-600 transition-colors ${
+                hasChanges ? "" : "opacity-50 cursor-not-allowed"
               }`}
               onClick={updateNow}
+              disabled={!hasChanges}
             >
               {!hasChanges ? (
                 <>
@@ -366,22 +331,26 @@ function GuardianProfilePage() {
 
               <div className="bg-gray-50 p-4 rounded-md border-gray-100">
                 <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 flex items-center justify-center">
-                    {userData?.name?.slice(0, 2)}
+                  <div className="h-12 w-12 flex items-center justify-center bg-gray-200 rounded-full text-gray-600 font-bold overflow-hidden">
+                    {userData?.imgUrl ? (
+                        <img src={userData.imgUrl} className="w-full h-full object-cover" alt="dp" />
+                    ) : (
+                        <span>{userData?.name?.slice(0, 2) || "??"}</span>
+                    )}
                   </div>
                   <div>
-                    <h4 className="font-medium">{userData?.name}</h4>
+                    <h4 className="font-medium">{userData?.name || "Loading..."}</h4>
                     <div className="text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3.5 w-3.5" />
 
                         {user_type === "children" ? (
                           <span>
-                            {userData?.ageMonths} months old (DOB:
+                            {userData?.ageMonths} months old (DOB:{" "}
                             {formateDate(userData?.birthDate)})
                           </span>
                         ) : (
-                          <span>{formateDate(userData)}</span>
+                          <span>{formateDate(userData?.createdAt)}</span>
                         )}
                       </div>
                     </div>
@@ -390,10 +359,9 @@ function GuardianProfilePage() {
               </div>
             </div>
 
-            {user_type !== "children" || (
+            {user_type === "children" && (
               <div className="space-y-2">
                 <label className="font-semibold">Relationship to Child</label>
-
                 <p className="text-sm py-2">Mother</p>
               </div>
             )}
@@ -401,7 +369,7 @@ function GuardianProfilePage() {
             <div>
               <h3 className="text-md font-medium mb-2">Recent Activity</h3>
               <div className="space-y-2">
-                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center">
+                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center border border-gray-100">
                   <div className="flex items-center">
                     <FileText className="h-4 w-4 text-blue-500 mr-2" />
                     <span className="text-sm">Viewed nutrition records</span>
@@ -411,7 +379,7 @@ function GuardianProfilePage() {
                   </span>
                 </div>
 
-                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center">
+                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center border border-gray-100">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 text-purple-500 mr-2" />
                     <span className="text-sm">Scheduled an appointment</span>
@@ -421,7 +389,7 @@ function GuardianProfilePage() {
                   </span>
                 </div>
 
-                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center">
+                <div className="bg-muted/30 p-2 rounded-md flex justify-between items-center border border-gray-100">
                   <div className="flex items-center">
                     <Clipboard className="h-4 w-4 text-green-500 mr-2" />
                     <span className="text-sm">Updated contact information</span>

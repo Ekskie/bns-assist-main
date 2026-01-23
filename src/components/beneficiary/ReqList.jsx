@@ -8,7 +8,7 @@ export default function ReqList() {
   const [filterData, setFilterData] = useState([]);
 
   useEffect(() => {
-    // Safely extract data
+    // Safely handle data structure
     if (data?.data && Array.isArray(data.data)) {
         setFilterData(data.data);
     } else if (Array.isArray(data)) {
