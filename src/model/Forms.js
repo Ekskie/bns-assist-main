@@ -1,22 +1,26 @@
 import mongoose from "mongoose";
 
-const FormsSchema = new mongoose.Schema(
+const FormSchema = new mongoose.Schema(
   {
     formName: {
       type: String,
       required: true,
     },
-    embeddedLink: {
+    formDescription: {
       type: String,
-      required: true,
-    },
-    mdeText: {
-      type: String,
-      required: true,
     },
     formType: {
-      type: String,
-      required: true,
+      type: String, // e.g., "BNAP", "OPT", etc.
+    },
+    embeddedLink: {
+      type: String, // This is where the Google Sheet URL goes
+    },
+    mdeText: {
+      type: String, // Markdown documentation
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
@@ -24,6 +28,4 @@ const FormsSchema = new mongoose.Schema(
   }
 );
 
-const Forms = mongoose.models.Forms || mongoose.model("Forms", FormsSchema);
-
-export default Forms;
+export default mongoose.models.Forms || mongoose.model("Forms", FormSchema);

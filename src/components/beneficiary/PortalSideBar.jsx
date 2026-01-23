@@ -1,183 +1,131 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+  LayoutDashboard,
   Calendar,
-  ChartArea,
-  File,
-  Home,
-  ChevronLeft,
-  Menu,
-  HomeIcon,
-  PanelLeft,
+  MessageCircle,
   Bell,
-  Power,
+  Menu,
+  ChevronLeft,
+  User,
+  ClipboardList
 } from "lucide-react";
 import clsx from "clsx";
-import useAuth from "@/hooks/useAuth";
-import { useDispatch, useSelector } from "react-redux";
-import { logOut } from "@/service/auth/authSlice";
-import { selectBeneficiary } from "@/service/beneficiaryPortal/beneficiaryPortalSlice";
 
 export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
-  const dispatch = useDispatch();
-  const userData = useSelector(selectBeneficiary);
-  const { user_type, name } = useAuth();
-
-  console.log(user_type, "aseasdasd");
-
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const menuItems = [
     {
       href: "/beneficiary",
-      icon: <Home size={18} />,
+      icon: <LayoutDashboard size={20} />,
       label: "Dashboard",
     },
     {
-      href: "/beneficiary/nutritionRecords",
-      icon: <File size={18} />,
-      label: "Nutrition Records",
-    },
-
-    {
       href: "/beneficiary/appointments",
-      icon: <Calendar size={18} />,
+      icon: <Calendar size={20} />,
       label: "Appointments",
     },
     {
-      href: "/beneficiary/notifications",
-      icon: <Bell size={18} />,
-      label: "Notifications",
+        href: "/beneficiary/nutritionRecords",
+        icon: <ClipboardList size={20} />,
+        label: "Nutrition Records",
     },
     {
       href: "/beneficiary/chatAssistance",
-      icon: <ChartArea size={18} />,
+      icon: <MessageCircle size={20} />,
       label: "Chat Assistance",
     },
+    {
+      href: "/beneficiary/notifications",
+      icon: <Bell size={20} />,
+      label: "Notifications",
+    },
+    {
+        href: "/beneficiary/guardianProfile",
+        icon: <User size={20} />,
+        label: "Guardian Profile",
+    },
   ];
+
+  // Prevent hydration mismatch by rendering a consistent server-side version first
+  // Or simply defer rendering the toggle-dependent parts until mounted.
+  // Ideally, the sidebar width transition should be CSS-only or use a consistent default.
+  // Here we'll stick to 'isSidebarOpen' passed from layout but safeguard dependent renders.
 
   return (
     <aside
       className={clsx(
-        "bg-[#FAFAFA]   text-gray-800 h-screen flex flex-col justify-between sticky top-0 transition-all duration-500 ease-in-out border-r border-gray-200 max-[640px]:w-0 max-[640px]:fixed max-[640px]:z-99",
-        isSidebarOpen
-          ? "min-w-[250px] p-4 w-[250px]"
-          : "w-0 p-0 overflow-hidden"
+        "bg-[#FAFAFA] text-gray-700 h-screen p-4 flex flex-col justify-start sticky top-0 transition-all duration-300 border-r border-gray-200",
+        // Only apply width change if mounted or default to open on server to match layout
+        (mounted ? isSidebarOpen : true) ? "w-64" : "w-20"
       )}
     >
-      {/* Top Logo and Toggle */}
-      <div
-        className={clsx(
-          "transition-opacity duration-300 ease-in-out",
-          isSidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-      >
-        <div className="w-full flex items-center justify-between mb-12">
-          <div className="flex items-center gap-2">
-            <div className="bg-green-500 text-white font-bold text-sm px-2 py-1 rounded">
-              BNS
-            </div>
-            <div>
-              <p className="text-green-600 font-semibold">BNS Assist</p>
-              <p className="text-xs text-gray-400">Beneficiary Portal</p>
-            </div>
-          </div>
-
-          <button onClick={() => setIsSidebarOpen(false)}>
-            <i className="bi bi-x text-lg"></i>
-          </button>
+      {/* Top header & toggle */}
+      <div className="flex items-center justify-between mb-8 px-2">
+        <div className={clsx("flex items-center gap-2 overflow-hidden transition-all", (mounted ? isSidebarOpen : true) ? "w-auto" : "w-0")}>
+           <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">B</div>
+           <span className="font-bold text-lg whitespace-nowrap">Beneficiary</span>
         </div>
-
-        {/* Menu Title */}
-        <p className="text-xs text-gray-500 mb-6">Menu</p>
-
-        {/* Navigation */}
-        <nav className="space-y-2 w-full">
-          {menuItems.map(({ href, icon, label }) => {
-            const isActive = pathname === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={clsx(
-                  "flex items-center gap-3 px-3 py-2 rounded-full text-sm transition",
-                  isActive
-                    ? "bg-green-100 text-green-600"
-                    : "text-gray-700 hover:bg-gray-100"
-                )}
-              >
-                {icon}
-                {isSidebarOpen && <span>{label}</span>}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {user_type === "children" ? (
-          <>
-            {/* Child Profile */}
-            {isSidebarOpen && (
-              <div
-                className=" w-full h-full flex flex-col justify-end"
-                onClick={() => router.push("/beneficiary/childProfile/123")}
-              >
-                <p className="text-xs text-gray-500 mb-2">Child Profile</p>
-                <div className="flex items-center gap-3 mb-4 cursor-pointer">
-                  <div className="w-8 h-8 rounded-full border-2 border-green-500 flex items-center justify-center text-xs text-green-500">
-                    👦
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-800">
-                      {userData?.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Age: {userData?.ageMonths} months
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <></>
-        )}
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="text-gray-500 hover:text-gray-900 p-1 rounded hover:bg-gray-100"
+        >
+          {(mounted ? isSidebarOpen : true) ? <ChevronLeft size={20} /> : <Menu size={20} />}
+        </button>
       </div>
 
-      {/* Guardian Footer */}
-      {isSidebarOpen ? (
-        <div className="border-t border-gray-200 pt-4 w-full">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-gray-200 text-xs text-gray-400 flex items-center justify-center">
-              👤
-            </div>
-            {isSidebarOpen && (
-              <div
-                className="flex-1"
-                onClick={() => router.push("/beneficiary/guardianProfile")}
-              >
-                <p className="text-sm font-medium text-gray-800">{name}</p>
-                <p className="text-xs text-gray-500">
-                  {user_type === "children" ? "Gurdian" : "Beneifciary"}
-                </p>
+      {/* Navigation */}
+      <nav className="space-y-1 flex-1">
+        {menuItems.map(({ href, icon, label }) => {
+          const isActive = pathname === href;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={clsx(
+                "flex items-center gap-3 p-3 rounded-lg transition-colors whitespace-nowrap group relative",
+                isActive
+                  ? "bg-green-50 text-green-700 font-medium"
+                  : "hover:bg-gray-100 text-gray-600"
+              )}
+              title={!(mounted ? isSidebarOpen : true) ? label : ""}
+            >
+              <div className={clsx("shrink-0", isActive ? "text-green-600" : "text-gray-500 group-hover:text-gray-900")}>
+                  {icon}
               </div>
-            )}
+              <span className={clsx("text-sm transition-opacity duration-300", (mounted ? isSidebarOpen : true) ? "opacity-100" : "opacity-0 w-0 hidden")}>
+                {label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
 
-            <Power
-              size={18}
-              className="text-gray-400"
-              onClick={() => {
-                dispatch(logOut());
-                window.location.reload();
-              }}
-            />
-          </div>
+      {/* Child Profile Section - Fixed Hydration Error */}
+      {mounted && isSidebarOpen && (
+        <div
+            className="w-full mt-4 cursor-pointer p-3 rounded-lg hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200"
+            onClick={() => router.push("/beneficiary/childProfile/123")}
+        >
+            <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs shrink-0">
+                    JD
+                </div>
+                <div className="overflow-hidden">
+                    <p className="text-sm font-medium text-gray-900 truncate">John Doe (Child)</p>
+                    <p className="text-xs text-gray-500">View Profile</p>
+                </div>
+            </div>
         </div>
-      ) : (
-        <></>
       )}
     </aside>
   );
