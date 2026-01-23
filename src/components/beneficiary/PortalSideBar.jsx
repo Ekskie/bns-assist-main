@@ -10,11 +10,14 @@ import {
   Menu,
   ChevronLeft,
   User,
-  ClipboardList
+  ClipboardList,
+  LogOut // Import LogOut icon
 } from "lucide-react";
 import clsx from "clsx";
 import useAuth from "@/hooks/useAuth"; 
 import { useGetuserAccountDataQuery, useGetChildrenByMotherMutation } from "@/service/beneficiaryPortal/beneficiaryApiSlice";
+import { useDispatch } from "react-redux"; // Import useDispatch
+import { logOut } from "@/service/auth/authSlice"; // Import logOut action
 
 export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
   const pathname = usePathname();
@@ -22,6 +25,7 @@ export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
   const { id, user_type, name } = useAuth(); // Assuming 'name' is available in token/auth
   const [mounted, setMounted] = useState(false);
   const [myChildren, setMyChildren] = useState([]);
+  const dispatch = useDispatch(); // Initialize dispatch
 
   // Query to get full user profile if name isn't in auth token or to ensure we have correct name
   const { data: userData } = useGetuserAccountDataQuery(
@@ -55,6 +59,11 @@ export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
     fetchChildren();
   }, [userData, name, user_type]);
 
+  const handleLogout = () => {
+    dispatch(logOut()); // Dispatch logout action
+    router.push("/login"); // Redirect to login page
+  };
+
   const menuItems = [
     {
       href: "/beneficiary",
@@ -81,11 +90,13 @@ export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
       icon: <Bell size={20} />,
       label: "Notifications",
     },
-    {
+    // Only show Guardian Profile if the user is NOT a child
+    // This prevents the issue where a logged-in child sees their own profile on the "Guardian Profile" page
+    ...(user_type !== 'children' ? [{
         href: "/beneficiary/guardianProfile",
         icon: <User size={20} />,
         label: "Guardian Profile",
-    },
+    }] : []),
   ];
 
   return (
@@ -178,6 +189,24 @@ export default function PortalSideBar({ isSidebarOpen, setIsSidebarOpen }) {
             </div>
         </div>
       )}
+
+      {/* Logout Button */}
+      <div className="mt-auto pt-4 border-t border-gray-200">
+        <button
+          onClick={handleLogout}
+          className={clsx(
+            "w-full flex items-center gap-3 p-3 rounded-lg transition-colors whitespace-nowrap group relative hover:bg-red-50 text-gray-600 hover:text-red-600"
+          )}
+          title={!(mounted ? isSidebarOpen : true) ? "Log Out" : ""}
+        >
+          <div className="shrink-0">
+            <LogOut size={20} />
+          </div>
+          <span className={clsx("text-sm transition-opacity duration-300 font-medium", (mounted ? isSidebarOpen : true) ? "opacity-100" : "opacity-0 w-0 hidden")}>
+            Log Out
+          </span>
+        </button>
+      </div>
     </aside>
   );
 }

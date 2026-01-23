@@ -1,209 +1,241 @@
 "use client";
-import PaginatedUserTable from "@/components/superAdmin/PaginatedUserTable";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import FilterDropdown from "@/components/ui/FilterDropdown"; // Ensure this path is correct
 
 const BARANGAY_OPTIONS = [
-	"Barangay San Isidro",
-	"Barangay Malinis",
-	"Barangay Poblacion",
-	"Barangay Mabini",
-	"Barangay Dalandanan",
+  "All",
+  "Barangay San Isidro",
+  "Barangay Malinis",
+  "Barangay Poblacion",
+  "Barangay Mabini",
+  "Barangay Dalandanan",
 ];
 
-export default function SuperAdminBnsUsersPage() {
-	const [isViewing, setIsViewing] = useState(false);
-	const [isEditing, setIsEditing] = useState(false);
-	const [userData, setUserData] = useState({});
+const STATUS_OPTIONS = ["All", "Active", "Inactive", "Pending"]; // Added "Pending" to catch unapproved users
 
-	const handleChange = (e) => {
-		const { name, value } = e.target;
-		setFormData((prev) => ({ ...prev, [name]: value }));
-	};
-	console.log(userData);
-	return (
-		<div className="text-black">
-			<div className="">
-				<p className="text-2xl font-bold">ALL BNS Users</p>
-				<p className="text-gray-500">
-					Manage all Barangay Nutrition Scholar (BNS) users in the system.
-				</p>
-			</div>
-			{!isViewing && !isEditing && (
-				<>
-					<PaginatedUserTable
-						setEditing={setIsEditing}
-						setViewing={setIsViewing}
-						setUserDatas={setUserData}
-					/>
-				</>
-			)}
+export default function PaginatedUserTable({
+  setEditing,
+  setViewing,
+  setUserDatas,
+  // Fallback prop in case it's passed as singular in some versions of the parent
+  setUserData,
+}) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  
+  // Default to "All" to show everyone (including unapproved) immediately
+  const [statusFilter, setStatusFilter] = useState("All"); 
+  const [barangayFilter, setBarangayFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemsPerPage = 10;
 
-			{isViewing && (
-				<>
-					<div className="bg-white p-6 rounded-xl shadow my-6">
-						{userData && (
-							<>
-								<h2 className="text-xl font-bold text-gray-800 mb-4">
-									BNS User Details
-								</h2>
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, statusFilter, barangayFilter, searchTerm]);
 
-								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
-									<div>
-										<span className="font-medium">First Name:</span>{" "}
-										{userData.firstname}
-									</div>
-									<div>
-										<span className="font-medium">Last Name:</span>{" "}
-										{userData.lastname}
-									</div>
-									<div>
-										<span className="font-medium">Email:</span>{" "}
-										{userData.emailAddress}
-									</div>
-									<div>
-										<span className="font-medium">Contact Number:</span>{" "}
-										{userData.number}
-									</div>
-									<div>
-										<span className="font-medium">Barangay:</span>{" "}
-										{userData.barangay}
-									</div>
-									<div>
-										<span className="font-medium">BNS Number:</span>{" "}
-										{userData.bnsnumber}
-									</div>
-									<div>
-										<span className="font-medium">Type:</span> {userData.type}
-									</div>
-									<div>
-										<span className="font-medium">Status:</span>{" "}
-										<span
-											className={`inline-block px-2 py-1 rounded text-xs ${
-												userData.status === "Active"
-													? "bg-green-100 text-green-700"
-													: "bg-gray-200 text-gray-600"
-											}`}
-										>
-											{userData.status}
-										</span>
-									</div>
-								</div>
-							</>
-						)}
-					</div>
-					<div className="">
-						<button
-							className="bg-gray-500 btn border-none px-6"
-							onClick={() => {
-								setIsViewing(false);
-								setUserData({});
-							}}
-						>
-							Back
-						</button>
-					</div>
-				</>
-			)}
-			{isEditing && (
-				<>
-					<form className="bg-white shadow rounded-xl p-6 w-full space-y-4 mt-6">
-						<h2 className="text-xl font-bold text-gray-800 mb-2">
-							Edit BNS User
-						</h2>
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: itemsPerPage,
+        status: statusFilter,
+        barangay: barangayFilter,
+        search: searchTerm,
+      });
 
-						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-							<div className="bg-white">
-								<label className="font-medium text-gray-700">First Name</label>
-								<input
-									type="text"
-									name="firstname"
-									value={userData.firstname}
-									onChange={handleChange}
-									className="input input-bordered w-full mt-1 bg-white border border-gray-500"
-								/>
-							</div>
-							<div>
-								<label className="font-medium text-gray-700">Last Name</label>
-								<input
-									type="text"
-									name="lastname"
-									value={userData.lastname}
-									onChange={handleChange}
-									className="input input-bordered w-full mt-1 bg-white border border-gray-500"
-								/>
-							</div>
-							<div>
-								<label className="font-medium text-gray-700">Email</label>
-								<input
-									type="email"
-									name="emailAddress"
-									value={userData.emailAddress}
-									onChange={handleChange}
-									className="input input-bordered w-full mt-1 bg-white border border-gray-500"
-								/>
-							</div>
-							<div>
-								<label className="font-medium text-gray-700">
-									Contact Number
-								</label>
-								<input
-									type="text"
-									name="number"
-									value={userData.number}
-									onChange={handleChange}
-									className="input input-bordered w-full mt-1 bg-white border border-gray-500"
-								/>
-							</div>
-							<div>
-								<label className="font-medium text-gray-700">Barangay</label>
-								<select
-									name="barangay"
-									value={userData.barangay}
-									onChange={handleChange}
-									className="select select-bordered w-full mt-1 bg-white border border-gray-500"
-								>
-									<option value="">Select Barangay</option>
-									{BARANGAY_OPTIONS.map((brgy) => (
-										<option key={brgy} value={brgy}>
-											{brgy}
-										</option>
-									))}
-								</select>
-							</div>
-							
-			
-							<div>
-								<label className="font-medium text-gray-700">Status</label>
-								<select
-									name="status"
-									value={userData.status}
-									onChange={handleChange}
-									className="select select-bordered w-full mt-1 bg-white border border-gray-500"
-								>
-									<option value="Active">Active</option>
-									<option value="Inactive">Inactive</option>
-								</select>
-							</div>
-						</div>
+      const res = await fetch(`/api/bnsUsers?${params}`);
+      const data = await res.json();
 
-						<div className="flex justify-end gap-2 mt-4">
-							<button
-								type="button"
-								className="btn btn-ghost border-gray-300"
-								onClick={()=>{
-									setIsEditing(false)
-									setUserData({})
-								}}
-							>
-								Cancel
-							</button>
-							<button type="submit" className="btn bg-[#28a745] text-white">
-								Save
-							</button>
-						</div>
-					</form>
-				</>
-			)}
-		</div>
-	);
+      if (res.ok) {
+        setUsers(data.users || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        console.error("Failed to fetch users");
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 on search
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // Helper to safely set user data, handling potential prop name mismatches
+  const handleSetUserData = (user) => {
+    // Check both plural (from current code) and singular (standard convention)
+    const setter = setUserDatas || setUserData;
+    
+    if (typeof setter === "function") {
+      setter(user);
+    } else {
+      // Just log a warning, don't crash
+      console.warn("PaginatedUserTable: setUserDatas/setUserData prop is missing.");
+    }
+  };
+
+  // Helper to safely trigger viewing mode
+  const handleViewUser = (user) => {
+    handleSetUserData(user);
+    
+    if (typeof setViewing === "function") {
+      setViewing(true);
+    } else {
+       console.warn("PaginatedUserTable: setViewing prop is missing. Please check parent component.");
+    }
+  };
+
+  // Helper to safely trigger editing mode
+  const handleEditUser = (user) => {
+    handleSetUserData(user);
+
+    if (typeof setEditing === "function") {
+      setEditing(true);
+    } else {
+       console.warn("PaginatedUserTable: setEditing prop is missing. Please check parent component.");
+    }
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow mt-6">
+      {/* Filters and Search */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <div className="w-full md:w-1/3">
+          <input
+            type="text"
+            placeholder="Search by name, email, or BNS number..."
+            className="input input-bordered w-full bg-white border-gray-300 text-gray-700"
+            value={searchTerm}
+            onChange={handleSearch}
+          />
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <FilterDropdown
+            label="Barangay"
+            options={BARANGAY_OPTIONS}
+            value={barangayFilter}
+            onChange={(val) => {
+              setBarangayFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+          <FilterDropdown
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="table w-full text-left">
+          <thead className="bg-gray-100 text-gray-700 font-semibold uppercase text-xs">
+            <tr>
+              <th className="p-3">Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Barangay</th>
+              <th className="p-3">Status</th>
+              <th className="p-3 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm text-gray-600">
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="text-center py-8">
+                  Loading users...
+                </td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-8">
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              users.map((user) => (
+                <tr key={user._id} className="border-b hover:bg-gray-50">
+                  <td className="p-3 font-medium text-gray-800">
+                    {/* Handle potential field name variations (camelCase vs lowercase) */}
+                    {user.fullName || `${user.firstname || user.firstName || ''} ${user.lastname || user.lastName || ''}`}
+                    <div className="text-xs text-gray-500">{user.bnsnumber || user.bnsNumber || user.bnsId || user._id}</div>
+                  </td>
+                  <td className="p-3">{user.emailAddress || user.email}</td>
+                  <td className="p-3">{user.barangay}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.status === "Active"
+                          ? "bg-green-100 text-green-700"
+                          : user.status === "Inactive"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {user.status || "Pending"}
+                    </span>
+                  </td>
+                  <td className="p-3 flex justify-center gap-2">
+                    <button
+                      className="btn btn-sm btn-ghost text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleViewUser(user)}
+                    >
+                      View
+                    </button>
+                    <button
+                      className="btn btn-sm btn-ghost text-green-600 hover:bg-green-50"
+                      onClick={() => handleEditUser(user)}
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-500">
+          Page {currentPage} of {totalPages}
+        </div>
+        <div className="flex gap-2">
+          <button
+            className="btn btn-sm btn-outline border-gray-300 text-gray-600 disabled:opacity-50"
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Previous
+          </button>
+          <button
+            className="btn btn-sm btn-outline border-gray-300 text-gray-600 disabled:opacity-50"
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
