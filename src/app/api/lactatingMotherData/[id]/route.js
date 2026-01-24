@@ -1,24 +1,109 @@
-import { NextResponse } from "next/server";
-import LactatingUser from "@/model/LactatingUser";
 import connectToDatabase from "@/lib/mongoose";
+import LactatingUser from "@/model/LactatingUser";
+import { NextResponse } from "next/server";
 
 export async function GET(request, context) {
-	await connectToDatabase();
+  try {
+    await connectToDatabase();
 
-	const { id } = context?.params;
+    // Await params before destructuring in Next.js 15
+    const { id } = await context.params;
 
-	if (!id) {
-		return NextResponse.json(
-			{ message: "All Fields are Mandatory!" },
-			{ status: 400 }
-		);
-	}
+    if (!id) {
+      return NextResponse.json(
+        { message: "ID parameter is missing" },
+        { status: 400 }
+      );
+    }
 
-	const user = await LactatingUser.findOne({ _id: id }).select("-password");
+    const lactatingUser = await LactatingUser.findById(id);
 
-	if (user) {
-		return NextResponse.json(user);
-	} else {
-		return NextResponse.json({ message: "No user found" }, { status: 401 });
-	}
+    if (!lactatingUser) {
+      return NextResponse.json(
+        { message: "Lactating mother record not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(lactatingUser, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching lactating mother record:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request, context) {
+  try {
+    await connectToDatabase();
+
+    // Await params before destructuring in Next.js 15
+    const { id } = await context.params;
+    const data = await request.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "ID parameter is missing" },
+        { status: 400 }
+      );
+    }
+
+    const updatedUser = await LactatingUser.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { message: "Lactating mother record not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(updatedUser, { status: 200 });
+  } catch (error) {
+    console.error("Error updating lactating mother record:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    await connectToDatabase();
+
+    // Await params before destructuring in Next.js 15
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        { message: "ID parameter is missing" },
+        { status: 400 }
+      );
+    }
+
+    const deletedUser = await LactatingUser.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return NextResponse.json(
+        { message: "Lactating mother record not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "Record deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting lactating mother record:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
 }
