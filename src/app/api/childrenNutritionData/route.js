@@ -10,9 +10,15 @@ async function generateUniqueCode() {
   let bns_code;
   let exists = true;
 
+  // Note: Using ChildrenNutritionData or BnsUser to check uniqueness might be better depending on intent,
+  // but keeping original logic referencing PregnantUser (which might be a copy-paste error in original code, but I'll leave it if I can't verify).
+  // Actually, for 'bns_code' which usually belongs to BNS users, this logic seems odd here for child records unless it's a child ID.
+  // Assuming this logic is intended for generating a code for the child record (labeled 'bns_code' in schema).
+  // I will check ChildrenNutritionData instead of PregnantUser to be safe for this specific model.
   while (exists) {
     bns_code = generateBns_code();
-    exists = await PregnantUser.findOne({ bns_code }).maxTimeMS(30000);
+    // Checking against ChildrenNutritionData for collision within this collection
+    exists = await ChildrenNutritionData.findOne({ bns_code }).maxTimeMS(30000);
   }
 
   return bns_code;
@@ -20,7 +26,7 @@ async function generateUniqueCode() {
 
 /* GET ALL DATA OF CHILDREN NUTRITION DATA */
 export async function GET() {
-  connectToDatabase();
+  await connectToDatabase();
 
   const childrenNutritionData = await ChildrenNutritionData.find().lean();
 
@@ -29,14 +35,14 @@ export async function GET() {
   } else {
     return NextResponse.json(
       { message: "No NutritionData Found!" },
-      { status: 400 }
+      { status: 404 } // Changed to 404 for Not Found
     );
   }
 }
 
 /* ADD NEW DATA */
 export async function POST(request) {
-  connectToDatabase();
+  await connectToDatabase();
 
   const body = await request.json();
 
@@ -58,6 +64,7 @@ export async function POST(request) {
     recommendation,
   } = body;
 
+  // Basic field validation
   if (!name || !status || !mother) {
     return NextResponse.json(
       { message: "All Fields are Mandatory!" },
@@ -65,6 +72,7 @@ export async function POST(request) {
     );
   }
 
+  // Check for duplicates
   const duplicate = await ChildrenNutritionData.findOne({ name }).maxTimeMS(
     30000
   );
@@ -72,14 +80,17 @@ export async function POST(request) {
   if (duplicate) {
     return NextResponse.json(
       { message: "Child Has already Have Record " },
-      { status: 401 }
+      { status: 409 } // Changed from 401 to 409 (Conflict)
     );
   }
 
-  if (!weightKg || !heightCm || !muacCm) {
+  // Validate measurements.
+  // Note: Removed !muacCm from check because it's marked 'Optional' in the form and defaults to 0.
+  // Also ensuring weight and height are strictly checked (allowing 0 might not be physically valid for a child but avoids the falsy trap if logic changes).
+  if (!weightKg || !heightCm) {
     return NextResponse.json(
-      { message: "Missing  measurement  data" },
-      { status: 401 }
+      { message: "Missing measurement data (Weight and Height are required)" },
+      { status: 400 } // Changed from 401 to 400 (Bad Request)
     );
   }
 
@@ -96,7 +107,7 @@ export async function POST(request) {
     bmi,
     type: "children",
     approve: true,
-    bns_code: generateUniqueCode(),
+    bns_code: await generateUniqueCode(), // Added await
     information: [
       {
         status,
@@ -112,7 +123,7 @@ export async function POST(request) {
   if (nutritionData) {
     return NextResponse.json(nutritionData, { status: 201 });
   } else {
-    return NextResponse.json({ message: "Invalid Register" });
+    return NextResponse.json({ message: "Invalid Register" }, { status: 400 });
   }
 }
 
@@ -146,7 +157,7 @@ export async function PUT(request) {
         { status: 201 }
       );
     } else {
-      return NextResponse.json({ message: "Invalid Update" });
+      return NextResponse.json({ message: "Invalid Update" }, { status: 400 });
     }
   } else if (nutritionData && type === "decline") {
     const result = await nutritionData.deleteOne();
@@ -157,7 +168,9 @@ export async function PUT(request) {
         { status: 201 }
       );
     } else {
-      return NextResponse.json({ message: "Invalid Decline" });
+      return NextResponse.json({ message: "Invalid Decline" }, { status: 400 });
     }
+  } else {
+      return NextResponse.json({ message: "Record not found" }, { status: 404 });
   }
 }

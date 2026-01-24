@@ -43,6 +43,22 @@ export const authtApiSlice = api.injectEndpoints({
         url: "/childrenNutritionData/admin",
       }),
     }),
+
+    // New mutations for Delete and Update Profile
+    deleteChildrenNutritionData: builder.mutation({
+      query: ({ id }) => ({
+        url: `/childrenNutritionData/${id}`, // Dynamic ID route
+        method: "DELETE",
+      }),
+    }),
+
+    updateChildrenNutritionData: builder.mutation({
+      query: (data) => ({
+        url: `/childrenNutritionData/${data._id}`, // Dynamic ID route
+        method: "PUT",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -52,4 +68,6 @@ export const {
   useAddNewCndataRecordMutation,
   useApproveDeclineNutritioDataMutation,
   useGetTableNutritionDataQuery,
+  useDeleteChildrenNutritionDataMutation,
+  useUpdateChildrenNutritionDataMutation,
 } = authtApiSlice;

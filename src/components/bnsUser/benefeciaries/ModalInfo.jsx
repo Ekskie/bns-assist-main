@@ -14,7 +14,7 @@ const ModalInfo = ({
   number,
   pregnantinformation,
 }) => {
-  /*   const modalInfoOpen = true; */
+  /* const modalInfoOpen = true; */
   const setBg = (txt) => {
     if (txt?.toLowerCase() === "low") {
       return "#4CAF50";
@@ -30,7 +30,10 @@ const ModalInfo = ({
   };
 
   const calculateAge = (birthDateStr) => {
+    if (!birthDateStr) return "N/A";
     const birthDate = new Date(birthDateStr);
+    // Check if the date is valid
+    if (isNaN(birthDate.getTime())) return "N/A";
     const today = new Date();
     return differenceInYears(today, birthDate);
   };
@@ -104,7 +107,7 @@ const ModalInfo = ({
               </div>
             </div>
 
-            {/*  */}
+            {/* */}
             <div className="w-1/2">
               <p className="text-[14px] text-[#64748b] mb-2 font-medium">
                 Address Information
@@ -154,14 +157,14 @@ const ModalInfo = ({
                   </p>
                   <p
                     className={`bg-[${setBg(
-                      pregnantinformation[pregnantinformation?.length - 1]
-                        ?.pregnacyRisk
+                      pregnantinformation &&
+                        pregnantinformation[pregnantinformation.length - 1]
+                          ?.pregnacyRisk
                     )}] rounded-full text-white px-2 text-[14px] h-min  `}
                   >
-                    {
-                      pregnantinformation[pregnantinformation?.length - 1]
-                        ?.pregnacyRisk
-                    }
+                    {pregnantinformation &&
+                      pregnantinformation[pregnantinformation.length - 1]
+                        ?.pregnacyRisk}
                   </p>
                 </div>
                 {/* BLOOD PRESSURE */}
@@ -170,10 +173,9 @@ const ModalInfo = ({
                     Blood Pressure:
                   </p>
                   <p className="text-[14px] text-black mb-2 font-regular w-1/2">
-                    {
-                      pregnantinformation[pregnantinformation?.length - 1]
-                        ?.bloodPressure
-                    }
+                    {pregnantinformation &&
+                      pregnantinformation[pregnantinformation.length - 1]
+                        ?.bloodPressure}
                   </p>
                 </div>
               </div>
@@ -188,10 +190,9 @@ const ModalInfo = ({
                   </p>
 
                   <p className="text-[14px] text-black mb-2 font-regular w-1/2">
-                    {
-                      pregnantinformation[pregnantinformation?.length - 1]
-                        ?.weightKg
-                    }
+                    {pregnantinformation &&
+                      pregnantinformation[pregnantinformation.length - 1]
+                        ?.weightKg}
                     Kg
                   </p>
                 </div>
@@ -201,10 +202,9 @@ const ModalInfo = ({
                     MUAC:
                   </p>
                   <p className="text-[14px] text-black mb-2 font-regular w-1/2">
-                    {
-                      pregnantinformation[pregnantinformation?.length - 1]
-                        ?.muacCm
-                    }
+                    {pregnantinformation &&
+                      pregnantinformation[pregnantinformation.length - 1]
+                        ?.muacCm}
                     Cm
                   </p>
                 </div>
@@ -215,10 +215,9 @@ const ModalInfo = ({
                 Supplement :
               </p>
               <p className="text-[14px] text-black mb-2 font-regular w-1/2">
-                {
-                  pregnantinformation[pregnantinformation?.length - 1]
-                    ?.supplement
-                }
+                {pregnantinformation &&
+                  pregnantinformation[pregnantinformation.length - 1]
+                    ?.supplement}
               </p>
             </div>
           </div>
@@ -232,7 +231,8 @@ const ModalInfo = ({
               {/* LAST CHECKUP */}
               <div className="w-full flex">
                 <p className="text-[14px] text-black mb-2 font-regular w-full p-3 bg-[#f8fafc] rounded-sm">
-                  {pregnantinformation[pregnantinformation?.length - 1]?.note}
+                  {pregnantinformation &&
+                    pregnantinformation[pregnantinformation.length - 1]?.note}
                 </p>
               </div>
             </div>
@@ -243,20 +243,21 @@ const ModalInfo = ({
               </p>
               {/* RECOMMENDATION STATUS   */}
               <div className="w-full flex flex-col gap-2 bg-[#f8fafc] h-full">
-                {pregnantinformation[
-                  pregnantinformation?.length - 1
-                ]?.recommendation?.map((data, index) => {
-                  return (
-                    <div className="w-full p-2 " key={index}>
-                      <p className="text-[14px] text-black mb-2  w-full font-bold ">
-                        {data?.title}
-                      </p>{" "}
-                      <p className="text-[14px] text-black mb-2 font-regular w-full ">
-                        {data?.description}
-                      </p>
-                    </div>
-                  );
-                })}{" "}
+                {pregnantinformation &&
+                  pregnantinformation[
+                    pregnantinformation.length - 1
+                  ]?.recommendation?.map((data, index) => {
+                    return (
+                      <div className="w-full p-2 " key={index}>
+                        <p className="text-[14px] text-black mb-2  w-full font-bold ">
+                          {data?.title}
+                        </p>{" "}
+                        <p className="text-[14px] text-black mb-2 font-regular w-full ">
+                          {data?.description}
+                        </p>
+                      </div>
+                    );
+                  })}{" "}
               </div>
             </div>
           </div>

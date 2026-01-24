@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 const AddingNutritionForm = ({ setOpen, formStatus }) => {
   /* API POST */
 
-  const [addData, { isError }] = useAddChildrenNutritionDataMutation();
+  const [addData, { isError, error }] = useAddChildrenNutritionDataMutation();
 
   const [dropDownOpen, setDropDownOpen] = useState(false);
   const [recommendationDropDown, setRecommendationDropDown] = useState(false);
@@ -32,7 +32,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
     },
   });
 
-  console.log(formData);
+  console.log("Current Form Data State:", formData);
 
   /* Dynamic On Change  */
   const setChangeData = (e) => {
@@ -190,7 +190,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
     const bmi = parseFloat(bmiValue.toFixed(2));
     let status = "";
 
-    console.log(weight, height, bmi);
+    console.log("Calculated BMI:", weight, height, bmi);
 
     if (bmi < 16) {
       status = "severely underweight";
@@ -202,7 +202,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
       status = "overweight";
     }
 
-    /*   return { bmi, status }; */
+    /* return { bmi, status }; */
 
     setFormData((prev) => {
       return {
@@ -244,6 +244,9 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
   /* ADD DATA */
 
   const sendData = async () => {
+    console.log("sendData function triggered");
+
+    // Validate required fields
     const isFormValid = [
       formData?.name,
       formData?.mother,
@@ -253,62 +256,55 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
       formData?.number,
       formData?.information?.weightKg,
       formData?.information?.heightCm,
-      formData?.information?.muacCm,
     ].every(Boolean);
+
+    if (!isFormValid) {
+        console.warn("Validation Failed. Missing fields:", formData);
+        toast.error("Please fill in all required fields (Name, Mother, Birthdate, Gender, Email, Number, Weight, Height)");
+        return;
+    }
+
+    const dateNow = new Date().toISOString(); // Use standard ISO date format
 
     const dataToSend = {
       name: formData.name,
       mother: formData.mother,
       ageMonths: getAgeInMonths(formData?.birthDate),
       gender: formData.gender?.toLocaleLowerCase(),
-      status: formData.status,
+      status: formData.status || "Normal", // Default status if not calculated
       birthDate: formData.birthDate,
-      bmi: parseInt(formData.bmi),
+      bmi: parseFloat(formData.bmi) || 0, // Use parseFloat
       email: formData.email,
       number: formData.number,
-      weightKg: parseInt(formData.information.weightKg),
-      heightCm: parseInt(formData.information.heightCm),
-      muacCm: parseInt(formData.information.muacCm),
-      date: formData.information.date,
-      address: formData.address, // if exists
+      weightKg: parseFloat(formData.information.weightKg) || 0, // Use parseFloat
+      heightCm: parseFloat(formData.information.heightCm) || 0, // Use parseFloat
+      muacCm: parseFloat(formData.information.muacCm) || 0, // Use parseFloat
+      date: dateNow, // Use generated ISO date
+      address: formData.address,
       recommendation: formData.information.recommendation,
     };
 
-    console.log(dataToSend);
+    console.log("Preparing to send data payload:", dataToSend);
 
-    /*  if (isFormValid) {
-      const res = await addData({ ...dataToSend });
+    try {
+      console.log("Calling addData mutation...");
+      const res = await addData({ ...dataToSend }).unwrap(); // unwrap to handle errors in catch block
+      
+      console.log("API Response Success:", res);
+      
+      toast.success("Child Nutrition Record Created Successfully!", {
+        duration: 3000,
+      });
 
-      if (isError) {
-        toast.error("Invalid Create", {
-          duration: 3000,
-        });
-      } else {
-        toast.success("User Data Created", {
-          duration: 3000,
-        });
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
-    } */
-    if (isFormValid) {
-      try {
-        const res = await addData({ ...dataToSend });
-
-        toast.success("User Data Created", {
-          duration: 3000,
-        });
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } catch (error) {
-        toast.error("Invalid Create", {
-          duration: 3000,
-        });
-        console.error("Create Error:", error);
-      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error("API Create Error:", error);
+      console.error("Error details:", error?.data || error?.message);
+      toast.error(error?.data?.message || "Failed to create record. Please check console for details.", {
+        duration: 3000,
+      });
     }
   };
 
@@ -359,14 +355,14 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
             <div
               id="gender"
               name="nagenderme"
-              className="px-[8px] py-[12px] w-full flex justify-between outline-none rounded-md border border-gray-200 text-[14px] relative"
+              className="px-[8px] py-[12px] w-full flex justify-between outline-none rounded-md border border-gray-200 text-[14px] relative cursor-pointer bg-white"
               onClick={() => setDropDownOpen((prev) => !prev)}
             >
               {formData?.gender ? formData?.gender : " Choose Gender..."}
               <i className="bi bi-chevron-down"></i>
               {/* DROPDOWN MENU */}
               <div
-                className={`p-2 w-full  gap-2 flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute top-[120%] left-0 bg-[#f9fafb] ${
+                className={`p-2 w-full  gap-2 flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute top-[120%] left-0 bg-[#f9fafb] z-10 ${
                   dropDownOpen ? "flex" : "hidden"
                 } `}
               >
@@ -483,6 +479,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
               id="weight"
               className=" px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-[14px] placeholder:text-gray-500"
               placeholder="0"
+              step="0.01"
               value={formData?.information?.weightKg}
               onChange={(e) => setNumberData(e)}
               name="weightKg"
@@ -498,6 +495,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
               id="height"
               className=" px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-[14px] placeholder:text-gray-500"
               placeholder="0"
+              step="0.01"
               value={formData?.information?.heightCm}
               onChange={(e) => setNumberData(e)}
               name="heightCm"
@@ -513,6 +511,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
               id="muac"
               className=" px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-[14px] placeholder:text-gray-500"
               placeholder="0"
+              step="0.01"
               value={formData?.information?.muacCm}
               onChange={(e) => setNumberData(e)}
               name="muacCm"
@@ -608,14 +607,14 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
             <div
               id="recommendation"
               name="recommendation"
-              className="px-[8px] py-[12px] w-full flex justify-between outline-none rounded-md border border-gray-200 text-[14px] relative"
+              className="px-[8px] py-[12px] w-full flex justify-between outline-none rounded-md border border-gray-200 text-[14px] relative cursor-pointer bg-white"
               onClick={() => setRecommendationDropDown((prev) => !prev)}
             >
               Give Recommendation
               <i className="bi bi-chevron-down"></i>
               {/* DROPDOWN MENU */}
               <div
-                className={`p-2 w-full  gap-2 flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute bottom-[120%] left-0 bg-[#f9fafb] ${
+                className={`p-2 w-full  gap-2 flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute bottom-[120%] left-0 bg-[#f9fafb] z-10 ${
                   recommendationDropDown ? "flex" : "hidden"
                 } `}
               >
@@ -630,6 +629,18 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
                   onClick={() => addRecommendation("A2")}
                 >
                   Mild Underweight
+                </div>
+                <div
+                  className="px-[8px] py-[8px] w-full outline-none rounded-md border border-gray-200 text-[14px] relative duration-200 hover:bg-[#FFC105] cursor-pointer "
+                  onClick={() => addRecommendation("A3")}
+                >
+                  Overweight Risk
+                </div>
+                <div
+                  className="px-[8px] py-[8px] w-full outline-none rounded-md border border-gray-200 text-[14px] relative duration-200 hover:bg-[#FFC105] cursor-pointer "
+                  onClick={() => addRecommendation("A4")}
+                >
+                  Severely Underweight
                 </div>
               </div>
             </div>
