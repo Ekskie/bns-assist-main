@@ -2,7 +2,7 @@
 import { useState } from "react";
 // Changed from "@/service/forms/formsApiSlice" to relative path to fix build error
 import { useAddFormMutation, useGetFormsQuery } from "../../service/forms/formsApiSlice";
-import { Plus, Link as LinkIcon, FileText, Trash2, Pencil, ExternalLink } from "lucide-react";
+import { Plus, Link as LinkIcon, FileText, Trash2, Pencil, ExternalLink, Maximize2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function ManageFormTemplates() {
@@ -132,59 +132,80 @@ export default function ManageFormTemplates() {
       {/* ADD/EDIT MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+          {/* Increased max-width to 6xl and height handling */}
+          <div className="bg-white p-6 rounded-lg w-full max-w-6xl shadow-xl max-h-[95vh] overflow-y-auto flex flex-col">
             <h3 className="text-xl font-bold mb-4">{editingForm ? "Edit Template" : "Add Template"}</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Form Name <span className="text-red-500">*</span></label>
-                <input 
-                  className="w-full border p-2 rounded text-sm" 
-                  value={formData.formName}
-                  onChange={e => setFormData({...formData, formName: e.target.value})}
-                  required
-                  placeholder="e.g. Monthly Weighing Report"
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Form Name <span className="text-red-500">*</span></label>
+                  <input 
+                    className="w-full border p-2 rounded text-sm" 
+                    value={formData.formName}
+                    onChange={e => setFormData({...formData, formName: e.target.value})}
+                    required
+                    placeholder="e.g. Monthly Weighing Report"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <input 
-                  className="w-full border p-2 rounded text-sm" 
-                  value={formData.formDescription}
-                  onChange={e => setFormData({...formData, formDescription: e.target.value})}
-                  placeholder="Brief description..."
-                />
+                <div>
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <input 
+                    className="w-full border p-2 rounded text-sm" 
+                    value={formData.formDescription}
+                    onChange={e => setFormData({...formData, formDescription: e.target.value})}
+                    placeholder="Brief description..."
+                  />
+                </div>
               </div>
               
               <div>
                 <label className="block text-sm font-medium mb-1">Embed Link (Google Sheet/Doc) <span className="text-red-500">*</span></label>
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-col sm:flex-row gap-2 mb-2">
                     <input 
-                      className="w-full border p-2 rounded text-sm" 
+                      className="flex-1 border p-2 rounded text-sm" 
                       placeholder="https://docs.google.com/spreadsheets/..."
                       value={formData.embeddedLink}
                       onChange={e => setFormData({...formData, embeddedLink: e.target.value})}
                       required
                     />
-                    <a 
-                      href="https://sheets.new" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="shrink-0 bg-green-50 text-green-700 px-3 py-2 rounded text-sm font-medium hover:bg-green-100 flex items-center gap-1 border border-green-200 transition-colors"
-                      title="Create a new Google Sheet (opens in new tab)"
-                    >
-                      <Plus size={14} /> New Sheet
-                    </a>
+                    <div className="flex gap-2">
+                      <a 
+                        href="https://sheets.new" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="shrink-0 bg-green-50 text-green-700 px-3 py-2 rounded text-sm font-medium hover:bg-green-100 flex items-center gap-1 border border-green-200 transition-colors"
+                        title="Create a new Google Sheet (opens in new tab)"
+                      >
+                        <Plus size={14} /> New Sheet
+                      </a>
+                      
+                      {/* Full View Button */}
+                      {formData.embeddedLink && (
+                        <a 
+                          href={formData.embeddedLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="shrink-0 bg-blue-50 text-blue-700 px-3 py-2 rounded text-sm font-medium hover:bg-blue-100 flex items-center gap-1 border border-blue-200 transition-colors"
+                          title="Open full document in new tab"
+                        >
+                          <Maximize2 size={14} /> Full View
+                        </a>
+                      )}
+                    </div>
                 </div>
                 
-                {/* Embed Preview */}
+                {/* Embed Preview - Increased Height */}
                 {formData.embeddedLink && (
-                  <div className="w-full h-64 border rounded bg-gray-50 overflow-hidden relative">
-                    <div className="absolute top-0 right-0 p-1 bg-gray-100 rounded-bl text-[10px] text-gray-500 z-10">Preview</div>
+                  <div className="w-full h-[500px] border rounded bg-gray-50 overflow-hidden relative shadow-inner">
+                    <div className="absolute top-0 right-0 p-1 bg-gray-100 rounded-bl text-[10px] text-gray-500 z-10 font-medium px-2 border-l border-b border-gray-200">
+                        Live Preview
+                    </div>
                     <iframe 
                       src={formData.embeddedLink} 
                       className="w-full h-full"
                       title="Sheet Preview"
+                      loading="lazy"
                     />
                   </div>
                 )}
@@ -196,14 +217,14 @@ export default function ManageFormTemplates() {
               <div>
                 <label className="block text-sm font-medium mb-1">Documentation (Markdown)</label>
                 <textarea 
-                  className="w-full border p-2 rounded text-sm h-24 font-mono" 
+                  className="w-full border p-2 rounded text-sm h-32 font-mono" 
                   value={formData.mdeText}
                   onChange={e => setFormData({...formData, mdeText: e.target.value})}
-                  placeholder="# Instructions..."
+                  placeholder="# Instructions for filling this form..."
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-6 border-t pt-4">
+              <div className="flex justify-end gap-2 mt-6 border-t pt-4 sticky bottom-0 bg-white">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
