@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import connectToDatabase from "@/lib/mongoose";
 import ChildrenNutritionData from "@/model/ChildrenNutritionData";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     await connectToDatabase();
 
-    // Fetch all children who have at least one record
+    // Using lean() gives us the raw JavaScript objects from the DB
     const children = await ChildrenNutritionData.find().lean();
 
     const monthNames = [
@@ -24,7 +26,7 @@ export async function GET() {
       "Dec",
     ];
 
-    // Prepare result object for all 12 months
+    // Initialize results
     const results = monthNames.map((m) => ({
       month: m,
       Underweight: 0,
@@ -32,23 +34,39 @@ export async function GET() {
       Overweight: 0,
     }));
 
-    // Loop through each child
     children.forEach((child) => {
-      (child.information || []).forEach((record) => {
-        if (!record.date || !record.status) return;
+      if (child.information && Array.isArray(child.information)) {
+        child.information.forEach((item) => {
+          let record = item;
 
-        const monthIndex = new Date(record.date).getMonth();
-        const status = record.status;
+          // FIX: Parse stringified JSON if the database contains strings instead of objects
+          if (typeof item === 'string') {
+            try {
+              record = JSON.parse(item);
+            } catch (e) {
+              console.error("Failed to parse record:", item);
+              return;
+            }
+          }
 
-        // Match the record to one of the categories
-        if (status.toLowerCase() === "underweight") {
-          results[monthIndex].Underweight++;
-        } else if (status.toLowerCase() === "normal") {
-          results[monthIndex].Normal++;
-        } else if (status.toLowerCase() === "overweight") {
-          results[monthIndex].Overweight++;
-        }
-      });
+          if (!record.date || !record.status) return;
+
+          const recordDate = new Date(record.date);
+          if (isNaN(recordDate.getTime())) return;
+
+          const monthIndex = recordDate.getMonth();
+          const status = (record.status || "").trim().toLowerCase();
+
+          // Categorize status
+          if (status.includes("underweight") || status.includes("severely")) {
+            results[monthIndex].Underweight++;
+          } else if (status === "normal") {
+            results[monthIndex].Normal++;
+          } else if (status.includes("overweight") || status.includes("obese")) {
+            results[monthIndex].Overweight++;
+          }
+        });
+      }
     });
 
     return NextResponse.json({
@@ -56,7 +74,7 @@ export async function GET() {
       data: results,
     });
   } catch (err) {
-    console.error("Error:", err);
+    console.error("Error in nutrition stats API:", err);
     return NextResponse.json(
       { success: false, message: "Server error", details: err.message },
       { status: 500 }

@@ -19,3 +19,26 @@ export async function GET() {
     return NextResponse.json({ message: "Error fetching forms" }, { status: 500 });
   }
 }
+
+export async function DELETE(req) {
+  await connectToDatabase();
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ message: "Form ID is required" }, { status: 400 });
+    }
+
+    const deletedForm = await SubmittedForm.findByIdAndDelete(id);
+
+    if (!deletedForm) {
+      return NextResponse.json({ message: "Form not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Form deleted successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Error deleting submitted form:", error);
+    return NextResponse.json({ message: "Error deleting form" }, { status: 500 });
+  }
+}

@@ -5,10 +5,10 @@ const getInitialToken = () => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("token");
     try {
-      return token ? JSON.parse(token) : "";
+      return token ? JSON.parse(token) : null;
     } catch (e) {
       console.error("Invalid token in localStorage:", token);
-      return "";
+      return null;
     }
   }
   return null;
@@ -25,10 +25,11 @@ const authAction = createSlice({
         localStorage.setItem("token", JSON.stringify(accessToken));
       }
 
-      state.token = JSON.parse(localStorage.getItem("token"));
+      state.token = accessToken;
     },
     logOut: (state, action) => {
       localStorage.removeItem("token");
+      state.token = null; // Fix: Explicitly clear the token from state
     },
   },
 });

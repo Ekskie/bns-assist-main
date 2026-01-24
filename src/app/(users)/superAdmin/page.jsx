@@ -25,13 +25,7 @@ import {
 
 function SuperAdminDashboard() {
   const { data } = useGetHeatmapReportQuery();
-  // Check if data is nested inside another data property or is direct
-  // Based on standard RTK Query, 'data' is the response body.
-  // The previous code used data?.data?.property, which implies the response had a 'data' field.
-  // The API route returns { totalBnsUsers, ... } directly.
-  // So we should use data?.totalBnsUsers.
-  
-  const dashboardStats = data?.data || data; // Fallback to handle both structures if uncertain
+  const dashboardStats = data?.data || data; 
 
   const { data: dataTrends } = useGetTableNutritionDataQuery();
   
@@ -62,118 +56,126 @@ function SuperAdminDashboard() {
   }));
 
   return (
-    <div className="text-black p-6 space-y-8 bg-gray-50 min-h-screen">
+    <div className="text-black p-6 space-y-6 bg-gray-50 min-h-screen">
       
       {/* 1. HEADER */}
-      <div>
-        <strong className="text-2xl text-gray-900">Super Admin Dashboard</strong>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">Super Admin Dashboard</h1>
         <p className="text-gray-500">
-          Welcome back! Here's what's happening across the municipality.
+          Welcome back! Here's an overview of community health operations.
         </p>
       </div>
 
-      {/* 2. KEY METRICS (EXISTING) */}
+      {/* 2. KEY METRICS - Kept at top for quick summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1: Total BNS Users */}
-        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-5 border border-gray-100">
           <div>
-            <h4 className="text-sm text-gray-500 font-medium">Total BNS Users</h4>
+            <h4 className="text-sm text-gray-500 font-medium mb-1">Total BNS Users</h4>
             <p className="text-2xl font-bold text-gray-900">
               {dashboardStats?.totalBnsUsers || 0}
             </p>
           </div>
-          <div className="bg-green-100 p-2 rounded-xl">
+          <div className="bg-green-50 p-3 rounded-full">
             <Users className="text-green-600 w-6 h-6" />
           </div>
         </div>
 
-        {/* Card 2: Active Barangays */}
-        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-5 border border-gray-100">
           <div>
-            <h4 className="text-sm text-gray-500 font-medium">Active Barangays</h4>
+            <h4 className="text-sm text-gray-500 font-medium mb-1">Active Barangays</h4>
             <p className="text-2xl font-bold text-gray-900">
               {dashboardStats?.activeBarangays || 0}
             </p>
           </div>
-          <div className="bg-green-100 p-2 rounded-xl">
+          <div className="bg-green-50 p-3 rounded-full">
              <UserPlus className="text-green-600 w-6 h-6" />
           </div>
         </div>
 
-        {/* Card 3: Reports This Month */}
-        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+        <div className="flex justify-between items-center bg-white rounded-xl shadow-sm p-5 border border-gray-100">
           <div>
-            <h4 className="text-sm text-gray-500 font-medium">Reports This Month</h4>
+            <h4 className="text-sm text-gray-500 font-medium mb-1">Reports This Month</h4>
             <p className="text-2xl font-bold text-gray-900">
               {dashboardStats?.reportThisMonthCount || 0}
             </p>
           </div>
-          <div className="bg-green-100 p-2 rounded-xl">
+          <div className="bg-green-50 p-3 rounded-full">
             <Calendar className="text-green-600 w-6 h-6" />
           </div>
         </div>
       </div>
 
-      {/* 3. NEW OPERATIONS SECTION (Daily Tasks + Inventory) */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Left: Daily Accomplishments (Time In/Out + Tasks) */}
-        <div className="xl:col-span-2">
+      {/* 3. PRIORITY SECTION: OPERATIONS & INVENTORY */}
+      {/* Moved to the top as requested */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Daily Accomplishments (Activity & Attendance) - Takes 2/3 width */}
+        <div className="lg:col-span-2">
             <DailyAccomplishments />
         </div>
         
-        {/* Right: Vitamin Inventory */}
-        <div className="xl:col-span-1">
+        {/* Inventory Management - Takes 1/3 width */}
+        <div className="lg:col-span-1">
             <InventoryManagement />
         </div>
       </div>
 
-      {/* 4. DATA TRENDS & SATISFACTION (EXISTING) */}
+      {/* 4. ANALYTICS ROW: Malnutrition & Heatmap */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+         {/* Malnutrition Analytics */}
+         <div className="w-full">
+            <MalnutritionAnalytics />
+         </div>
+         
+         {/* Barangay Heatmap */}
+         <div className="w-full bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div className="mb-4">
+               <h3 className="font-bold text-lg text-gray-800">Barangay Performance</h3>
+               <p className="text-sm text-gray-500">Activity levels and task compliance heatmap</p>
+            </div>
+            <div className="w-full min-h-[400px]">
+                <BarangayHeatmap rows={dashboardStats?.rows} />
+            </div>
+         </div>
+      </div>
+
+      {/* 5. TRENDS & SATISFACTION ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="w-full">
            {dataTrends?.data ? (
              <NutritionChart data={dataTrends?.data?.data} />
            ) : (
-             <div className="h-64 flex items-center justify-center bg-white rounded-xl shadow-sm">Loading Chart...</div>
+             <div className="h-full min-h-[300px] flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400">
+                <div className="flex flex-col items-center gap-2">
+                    <span className="loading loading-spinner loading-md"></span>
+                    <p>Loading Nutrition Trends...</p>
+                </div>
+             </div>
            )}
         </div>
-        <div className="w-full">
+        <div className="w-full h-full">
            <ServiceSatisfactionCard />
         </div>
       </div>
 
-      {/* 5. FEEDING PROGRAM LIST (NEW) & HEATMAP */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-         {/* New: List of Malnourished / Feeding Candidates */}
-         <div className="w-full">
-            <MalnutritionAnalytics />
-         </div>
-         
-         {/* Existing: Heatmap */}
-         <div className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            {dashboardStats?.rows ? (
-              <BarangayHeatmap rows={dashboardStats?.rows} />
-            ) : (
-              <div className="h-64 flex items-center justify-center">Loading Heatmap...</div>
-            )}
-         </div>
-      </div>
-
-      {/* 6. PREGNANT DASHBOARD (EXISTING) */}
+      {/* 6. PREGNANT DATA ROW */}
       <div className="w-full bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <div className="mb-6">
-          <strong className="text-2xl text-gray-900">Pregnant Dashboard</strong>
-          <p className="text-gray-500">
-            View pregnant analytics and reports across the municipality.
-          </p>
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h3 className="text-lg font-bold text-gray-800">Pregnant Women Statistics</h3>
+            <p className="text-sm text-gray-500">
+              Distribution of registered pregnant women per barangay
+            </p>
+          </div>
         </div>
 
-        <div className="w-full h-[400px]">
-          <h3 className="mb-4 font-semibold text-gray-700">Pregnant Women per Barangay</h3>
+        <div className="w-full h-[350px]">
           {chartData.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-gray-400">No pregnant data available</div>
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 bg-gray-50 rounded-lg">
+                <p>No pregnant data available</p>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
+              <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="barangay" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis allowDecimals={false} fontSize={12} tickLine={false} axisLine={false} />
@@ -181,7 +183,7 @@ function SuperAdminDashboard() {
                   cursor={{ fill: '#f3f4f6' }}
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} 
                 />
-                <Bar dataKey="total" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="total" name="Pregnant Women" fill="#ec4899" radius={[4, 4, 0, 0]} barSize={50} />
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import Request from "@/model/Request";
-import BnsUser from "@/model/BnsUser"; // Import BnsUser for population
 import connectToDatabase from "@/lib/mongoose";
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req) {
   await connectToDatabase();
   try {
-    // Populate 'requestedBy' to get user details (fullName, barangay)
+    // Fetch requests sorted by newest first
+    // We are no longer populating 'requestedBy' as it will store the fullName string directly
     const reqRequest = await Request.find({})
-      .populate("requestedBy", "fullName barangay") 
       .sort({ createdAt: -1 });
 
     return NextResponse.json({ data: reqRequest }, { status: 200 }); 
   } catch (error) {
+    console.error("Failed to fetch requests:", error);
     return NextResponse.json(
       { error: "Failed to fetch reqRequest" },
       { status: 500 }
@@ -49,33 +51,37 @@ export async function POST(req) {
 export async function PUT(request) {
   await connectToDatabase();
 
-  const body = await request.json();
+  try {
+    const body = await request.json();
+    const { id } = body;
 
-  const { id } = body;
-
-  if (!id) {
-    return NextResponse.json(
-      { message: "All Fields are Mandatory!" },
-      { status: 400 }
-    );
-  }
-
-  const requestResult = await Request.findById({
-    _id: id,
-  }).exec();
-
-  if (requestResult) {
-    requestResult.isdone = true;
-
-    const updatedrequest = await requestResult.save();
-
-    if (updatedrequest) {
+    if (!id) {
       return NextResponse.json(
-        { message: `request ${requestResult._id} Approve !` },
-        { status: 201 }
+        { message: "All Fields are Mandatory!" },
+        { status: 400 }
       );
-    } else {
-      return NextResponse.json({ message: "Invalid Update" });
     }
+
+    const requestResult = await Request.findById(id).exec();
+
+    if (requestResult) {
+      requestResult.isdone = true;
+
+      const updatedrequest = await requestResult.save();
+
+      if (updatedrequest) {
+        return NextResponse.json(
+          { message: `Request ${requestResult._id} Approved!` },
+          { status: 201 }
+        );
+      } else {
+        return NextResponse.json({ message: "Invalid Update" }, { status: 400 });
+      }
+    } else {
+        return NextResponse.json({ message: "Request not found" }, { status: 404 });
+    }
+  } catch (error) {
+      console.error(error);
+      return NextResponse.json({ message: "Server Error" }, { status: 500 });
   }
 }

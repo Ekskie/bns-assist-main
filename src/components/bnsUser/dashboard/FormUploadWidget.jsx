@@ -8,12 +8,30 @@ import { supabase } from "@/lib/supabase"; // Import Supabase client
 export default function FormUploadWidget() {
   const { id: userId, barangay } = useAuth();
   const [file, setFile] = useState(null);
-  const [title, setTitle] = useState("");
+  
+  // Use category instead of direct title input for filtering
+  const [category, setCategory] = useState("");
+  const [customTitle, setCustomTitle] = useState(""); 
+  
   const [loading, setLoading] = useState(false);
+
+  const reportCategories = [
+    "Monthly Weighing Report",
+    "Quarterly Narrative Report",
+    "BNS Accomplishment Report",
+    "Nutrition Action Plan",
+    "Feedback Report",
+    "Inventory Report",
+    "Others"
+  ];
 
   const handleUpload = async (e) => {
     e.preventDefault();
-    if (!file || !title) return toast.error("Please provide title and file");
+    
+    // Determine the final title
+    const finalTitle = category === "Others" ? customTitle : category;
+
+    if (!file || !finalTitle) return toast.error("Please provide a category and file");
 
     setLoading(true);
     try {
@@ -39,7 +57,7 @@ export default function FormUploadWidget() {
       const res = await fetch("/api/bnsUsers/submit-form", {
         method: "POST",
         body: JSON.stringify({
-          formTitle: title,
+          formTitle: finalTitle,
           submittedBy: userId,
           barangay: barangay || "Unknown",
           fileUrl: publicUrl // Store the Supabase URL
@@ -49,7 +67,8 @@ export default function FormUploadWidget() {
       if (res.ok) {
         toast.success("Form submitted successfully!");
         setFile(null);
-        setTitle("");
+        setCategory("");
+        setCustomTitle("");
       } else {
         const errorData = await res.json();
         throw new Error(errorData.message || "Submission failed");
@@ -73,13 +92,28 @@ export default function FormUploadWidget() {
       </h3>
 
       <form onSubmit={handleUpload} className="space-y-3 flex-1 flex flex-col">
-        <input
-          type="text"
-          placeholder="Report Title (e.g. Monthly Weighing)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+        {/* Category Dropdown */}
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
           className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700 focus:outline-none focus:border-orange-500"
-        />
+        >
+          <option value="" disabled>Select Report Category</option>
+          {reportCategories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+
+        {/* Custom Title Input (Only if 'Others' is selected) */}
+        {category === "Others" && (
+          <input
+            type="text"
+            placeholder="Specify Report Title"
+            value={customTitle}
+            onChange={(e) => setCustomTitle(e.target.value)}
+            className="w-full p-2 bg-gray-50 border border-gray-200 rounded text-sm text-gray-700 focus:outline-none focus:border-orange-500 animate-in fade-in slide-in-from-top-1"
+          />
+        )}
 
         <div className="relative border-2 border-dashed border-gray-200 rounded-lg p-3 text-center hover:bg-gray-50 transition cursor-pointer flex-1 flex flex-col justify-center items-center group">
           <input 
@@ -90,11 +124,11 @@ export default function FormUploadWidget() {
             disabled={loading}
           />
           <div className="flex flex-col items-center justify-center text-gray-400">
-             {file ? (
-               <div className="flex flex-col items-center gap-2 text-green-600 relative z-20">
-                 <CheckCircle size={24} />
-                 <span className="text-xs truncate max-w-[150px] font-medium">{file.name}</span>
-                 <button 
+              {file ? (
+                <div className="flex flex-col items-center gap-2 text-green-600 relative z-20">
+                  <CheckCircle size={24} />
+                  <span className="text-xs truncate max-w-[150px] font-medium">{file.name}</span>
+                  <button 
                     type="button"
                     onClick={(e) => {
                         e.stopPropagation(); // Prevent opening file dialog
@@ -102,17 +136,17 @@ export default function FormUploadWidget() {
                         clearFile();
                     }}
                     className="text-red-400 hover:text-red-600 text-[10px] flex items-center gap-1 mt-1 px-2 py-1 bg-red-50 rounded-full"
-                 >
+                  >
                     <X size={10} /> Remove
-                 </button>
-               </div>
-             ) : (
-               <>
-                 <FileText size={24} className="mb-2 group-hover:text-orange-400 transition-colors" />
-                 <span className="text-[10px] uppercase font-bold text-gray-500 group-hover:text-gray-700">Click to attach file</span>
-                 <span className="text-[9px] text-gray-400 mt-1">PDF, Images, Docs</span>
-               </>
-             )}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <FileText size={24} className="mb-2 group-hover:text-orange-400 transition-colors" />
+                  <span className="text-[10px] uppercase font-bold text-gray-500 group-hover:text-gray-700">Click to attach file</span>
+                  <span className="text-[9px] text-gray-400 mt-1">PDF, Images, Docs</span>
+                </>
+              )}
           </div>
         </div>
 

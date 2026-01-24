@@ -5,7 +5,16 @@ import dynamic from "next/dynamic";
 // 🔹 FIX: Dynamically import ReactApexChart with ssr: false
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-export default function BarangayHeatmap({ rows }) {
+export default function BarangayHeatmap({ rows = [] }) {
+  // Safe check if rows is not an array or empty
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center text-gray-400 bg-white rounded-xl border border-gray-100">
+        No heatmap data available
+      </div>
+    );
+  }
+
   const columns = [
     "Activity %",
     "Compliance %",
@@ -15,27 +24,27 @@ export default function BarangayHeatmap({ rows }) {
 
   // Convert data to Apex Heatmap series format
   const series = rows.map((r) => ({
-    name: r.barangay,
+    name: r.barangay || "Unknown",
     data: [
       {
         x: "Activity %",
-        y: r.activityPct,
-        meta: `${r.last30Count} task(s) in last 30d`,
+        y: r.activityPct || 0,
+        meta: `${r.last30Count || 0} task(s) in last 30d`,
       },
       {
         x: "Compliance %",
-        y: r.compliancePct,
-        meta: `${r.completedTasks}/${r.totalTasks} completed`,
+        y: r.compliancePct || 0,
+        meta: `${r.completedTasks || 0}/${r.totalTasks || 0} completed`,
       },
       {
         x: "Recency (freshness)",
-        y: r.recencyScore,
-        meta: `${r.recencyDays} day(s) ago`,
+        y: r.recencyScore || 0,
+        meta: `${r.recencyDays || 0} day(s) ago`,
       },
       {
         x: "BNS Assigned",
-        y: r.bnsAssigned * 10,
-        meta: `${r.bnsAssigned} BNS`,
+        y: (r.bnsAssigned || 0) * 10,
+        meta: `${r.bnsAssigned || 0} BNS`,
       }, // scaled so it shows well
     ],
   }));

@@ -1,9 +1,5 @@
 "use client";
-"use client";
-import {
-  useLoginAdminMutation,
-  useLoginMutation,
-} from "@/service/auth/autApiSlice";
+import { useLoginAdminMutation } from "@/service/auth/autApiSlice";
 import { setToken } from "@/service/auth/authSlice";
 import Link from "next/link";
 import { useState } from "react";
@@ -12,15 +8,14 @@ import { useDispatch } from "react-redux";
 
 const AdminLogIn = () => {
   /* API FUNCTION LOGIN */
-  const [logInBnsAdmin, { isSuccess, error, isError }] =
-    useLoginAdminMutation();
+  const [logInBnsAdmin, { isLoading }] = useLoginAdminMutation();
 
   const [logInData, setlogInData] = useState({
     email: "",
     password: "",
   });
 
-  /*  AUTH HANDLER*/
+  /* AUTH HANDLER*/
 
   const dispatch = useDispatch();
 
@@ -36,31 +31,36 @@ const AdminLogIn = () => {
     });
   };
 
-  const logInUser = async () => {
+  const logInUser = async (e) => {
+    e.preventDefault(); // Prevent default form submission
+
     if (logInData?.email && logInData?.password) {
-      const res = await logInBnsAdmin({ ...logInData });
+      try {
+        const res = await logInBnsAdmin({ ...logInData });
 
-      if (isError && res) {
-        console.log(res);
-
-        toast.error("Wrong Email or Password!", {
-          duration: 3000,
-        });
-      } else {
-        if (res?.data?.accessToken) {
+        if (res?.error) {
+          console.error(res.error);
+          toast.error(res.error?.data?.message || "Wrong Email or Password!", {
+            duration: 3000,
+          });
+        } else if (res?.data?.accessToken) {
           console.log(res?.data?.accessToken);
 
           dispatch(setToken({ accessToken: res?.data?.accessToken }));
+          toast.success("Login Successful!");
 
           setTimeout(() => {
             window.location.reload();
-          }, 2000);
+          }, 1000);
         }
+      } catch (err) {
+        console.error("Login failed", err);
+        toast.error("An unexpected error occurred.");
       }
+    } else {
+      toast.error("Please fill in both email and password.");
     }
   };
-
-  console.log(logInData);
 
   return (
     <div className="p-[24px]">
@@ -68,55 +68,60 @@ const AdminLogIn = () => {
       <p className="text-sm text-gray-600 mb-[8px]">
         Enter your credentials to access the administration portal
       </p>
-      {/* Email or ID Number*/}
-      <div className="w-full  items-center mb-4  ">
-        <label
-          htmlFor="email"
-          className="text-sm font-medium mb-2 inline-block text-nowrap"
-        >
-          Email or ID Number
-        </label>
-        <input
-          type="text"
-          id="email"
-          className="h-10 px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
-          name="email"
-          placeholder="bns.worker@example.com"
-          onChange={(e) => setChangeData(e)}
-        />
-      </div>
-      {/* Password */}
-      <div className="w-full  items-center mb-[24px]  ">
-        <div className="w-full flex justify-between">
+      <form onSubmit={logInUser}>
+        {/* Email or ID Number*/}
+        <div className="w-full  items-center mb-4  ">
           <label
-            htmlFor="password"
+            htmlFor="email"
             className="text-sm font-medium mb-2 inline-block text-nowrap"
           >
-            Password
-          </label>{" "}
-          <Link
-            href={""}
-            className="text-sm text-[#4CAF50] font-regular mb-2 inline-block text-nowrap hover:underline"
-          >
-            Forgot Password ?
-          </Link>
+            Email or ID Number
+          </label>
+          <input
+            type="text"
+            id="email"
+            className="h-10 px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
+            name="email"
+            placeholder="admin@example.com"
+            onChange={(e) => setChangeData(e)}
+            value={logInData.email}
+          />
         </div>
+        {/* Password */}
+        <div className="w-full  items-center mb-[24px]  ">
+          <div className="w-full flex justify-between">
+            <label
+              htmlFor="password"
+              className="text-sm font-medium mb-2 inline-block text-nowrap"
+            >
+              Password
+            </label>{" "}
+            <Link
+              href="#"
+              className="text-sm text-[#4CAF50] font-regular mb-2 inline-block text-nowrap hover:underline"
+            >
+              Forgot Password ?
+            </Link>
+          </div>
 
-        <input
-          type="password"
-          id="password"
-          className="h-10 px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
-          name="password"
-          placeholder="**********"
-          onChange={(e) => setChangeData(e)}
-        />
-      </div>
-      <button
-        className="w-full text-[14px] bg-[#4CAF50] text-white py-[12px] px-[8px] rounded-md hover:opacity-50 mb-4"
-        onClick={() => logInUser()}
-      >
-        Sign In as Admin
-      </button>
+          <input
+            type="password"
+            id="password"
+            className="h-10 px-[8px] py-[12px] w-full outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
+            name="password"
+            placeholder="**********"
+            onChange={(e) => setChangeData(e)}
+            value={logInData.password}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full text-[14px] bg-[#4CAF50] text-white py-[12px] px-[8px] rounded-md hover:opacity-50 mb-4 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Signing In..." : "Sign In as Admin"}
+        </button>
+      </form>
     </div>
   );
 };

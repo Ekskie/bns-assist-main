@@ -1,16 +1,13 @@
 "use client";
-import {
-  useLoginAdminMutation,
-  useLoginBeneciaryMutation,
-} from "@/service/auth/autApiSlice";
+import { useLoginBeneciaryMutation } from "@/service/auth/autApiSlice";
 import { setToken } from "@/service/auth/authSlice";
-import Link from "next/link";
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useDispatch } from "react-redux";
 
 const BeneficiaryLogIn = () => {
   /* API FUNCTION LOGIN */
-  const [loginBNF, { isSuccess, error, isError }] = useLoginBeneciaryMutation();
+  const [loginBNF, { isLoading }] = useLoginBeneciaryMutation();
 
   const [barangayDropDown, setBarangayDropDown] = useState(false);
 
@@ -20,7 +17,7 @@ const BeneficiaryLogIn = () => {
 
   const [typeOfLogin, setTypeOfLogIn] = useState("");
 
-  /*  AUTH HANDLER*/
+  /* AUTH HANDLER*/
 
   const dispatch = useDispatch();
 
@@ -36,37 +33,43 @@ const BeneficiaryLogIn = () => {
     });
   };
 
-  const logInUser = async () => {
-    if (logInData?.bns_code) {
-      const res = await loginBNF({
-        bns_code: logInData?.bns_code,
-        usertype: typeOfLogin,
-      });
+  const logInUser = async (e) => {
+    e.preventDefault(); // Prevent default form submission
 
-      if (isError && res) {
-        console.log(res);
-
-        toast.error("Id not existing", {
-          duration: 3000,
+    if (logInData?.bns_code && typeOfLogin) {
+      try {
+        const res = await loginBNF({
+          bns_code: logInData?.bns_code,
+          usertype: typeOfLogin,
         });
-      } else {
-        if (res?.data?.accessToken) {
+
+        if (res?.error) {
+          console.log(res);
+          toast.error(res.error?.data?.message || "ID not existing or invalid details", {
+            duration: 3000,
+          });
+        } else if (res?.data?.accessToken) {
           console.log(res?.data?.accessToken);
 
           dispatch(setToken({ accessToken: res?.data?.accessToken }));
+          toast.success("Login Successful!");
 
           setTimeout(() => {
             window.location.reload();
-          }, 2000);
+          }, 1000);
         }
+      } catch (err) {
+        console.error("Login failed", err);
+        toast.error("An unexpected error occurred.");
+      }
+    } else {
+      if (!logInData?.bns_code) {
+        toast.error("Please enter your Beneficiary ID.");
+      } else if (!typeOfLogin) {
+        toast.error("Please select an Account Type.");
       }
     }
   };
-
-  console.log({
-    bns_code: logInData?.bns_code,
-    usertype: typeOfLogin,
-  });
 
   return (
     <div className="p-[24px]">
@@ -74,91 +77,103 @@ const BeneficiaryLogIn = () => {
       <p className="text-sm text-gray-600 mb-[8px]">
         Access your family's nutrition records and appointments
       </p>
-      {/* Beneficiary or ID Number*/}
-      <div className="w-full  items-center mb-4  ">
-        <label
-          htmlFor="bns_code"
-          className="text-sm font-medium mb-2 inline-block text-nowrap"
-        >
-          Beneficiary ID
-        </label>
-        <div className="w-full flex gap-4">
-          <input
-            type="text"
-            id="bns_code"
-            className="h-10 px-[8px] py-[12px] w-1/2 outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
-            name="bns_code"
-            placeholder="BNF-12345 or 09XX-XXX-XXXX"
-            onChange={(e) => setChangeData(e)}
-          />
-
-          {/* DROPDOWN */}
-          <div
-            id="barangay"
-            name="barangay"
-            className="px-[8px] py-[6px] w-1/2 flex justify-between outline-none rounded-md border border-gray-200 text-[14px] relative focus:ring-[#4CAF50] focus:ring-offset-2 "
-            onClick={() => setBarangayDropDown((prev) => !prev)}
+      <form onSubmit={logInUser}>
+        {/* Beneficiary or ID Number*/}
+        <div className="w-full  items-center mb-4  ">
+          <label
+            htmlFor="bns_code"
+            className="text-sm font-medium mb-2 inline-block text-nowrap"
           >
-            {typeOfLogin ? typeOfLogin : "Select Account Type"}
-            <i className="bi bi-chevron-down"></i>
+            Beneficiary ID
+          </label>
+          <div className="w-full flex gap-4">
+            <input
+              type="text"
+              id="bns_code"
+              className="h-10 px-[8px] py-[12px] w-1/2 outline-none rounded-md border border-gray-200  text-black text-[14px]  focus:ring-1 focus:ring-[#4CAF50] focus:ring-offset-2"
+              name="bns_code"
+              placeholder="BNF-12345 or 09XX..."
+              onChange={(e) => setChangeData(e)}
+              value={logInData.bns_code}
+            />
+
+            {/* DROPDOWN */}
             <div
-              className={`p-2 w-full overflow-auto gap-2 flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute top-[120%] left-0 bg-[#f9fafb] ${
-                barangayDropDown ? "flex" : "hidden"
-              } `}
+              id="barangay"
+              className="px-[8px] py-[6px] w-1/2 flex justify-between items-center outline-none rounded-md border border-gray-200 text-[14px] relative cursor-pointer hover:bg-gray-50"
+              onClick={() => setBarangayDropDown((prev) => !prev)}
             >
-              {/* DROPDOWN DATA */}
-              <div
-                className={`px-[8px] py-[8px] w-full outline-none rounded-md border  border-gray-200 text-[14px] relative duration-200 hover:bg-[#FFC105] cursor-pointer flex   ${
-                  typeOfLogin === "children" ? "bg-[#ffc105]" : ""
-                }`}
-                onClick={() => setTypeOfLogIn("children")}
-              >
-                <i
-                  className={`bi bi-check mr-2 ${
-                    typeOfLogin === "children" ? "block" : "hidden"
-                  } `}
-                ></i>
-                Children Account
-              </div>
-              <div
-                className={`px-[8px] py-[8px] w-full outline-none rounded-md border border-gray-200 text-[14px] relative duration-200 hover:bg-[#FFC105] cursor-pointe flex  ${
-                  typeOfLogin === "pregnantwomen" ? "bg-[#ffc105]" : ""
-                } `}
-                onClick={() => setTypeOfLogIn("pregnantwomen")}
-              >
-                <i
-                  className={`bi bi-check mr-2 ${
-                    typeOfLogin === "pregnantwomen" ? "block" : "hidden"
-                  } `}
-                ></i>
-                Pregnant Mother
-              </div>
-              <div
-                className={`px-[8px] py-[8px] w-full outline-none rounded-md border border-gray-200 text-[14px] relative duration-200 hover:bg-[#FFC105] cursor-pointe flex  ${
-                  typeOfLogin === "lactatingmother" ? "bg-[#ffc105]" : ""
-                } `}
-                onClick={() => setTypeOfLogIn("lactatingmother")}
-              >
-                <i
-                  className={`bi bi-check mr-2 ${
-                    typeOfLogin === "lactatingmother" ? "block" : "hidden"
-                  } `}
-                ></i>
-                Lactating Mother
-              </div>
-            </div>{" "}
+              <span className="truncate">
+                {typeOfLogin
+                  ? typeOfLogin === "children"
+                    ? "Children Account"
+                    : typeOfLogin === "pregnantwomen"
+                    ? "Pregnant Mother"
+                    : "Lactating Mother"
+                  : "Select Type"}
+              </span>
+              <i className="bi bi-chevron-down ml-1"></i>
+              
+              {/* Dropdown Menu */}
+              {barangayDropDown && (
+                <div
+                  className="p-1 w-full flex-col outline-none rounded-md border border-gray-200 text-[14px] absolute top-[110%] left-0 bg-white shadow-lg z-10"
+                >
+                  <div
+                    className={`px-[8px] py-[8px] w-full rounded-md relative duration-200 hover:bg-[#FFC105]/20 cursor-pointer flex items-center ${
+                      typeOfLogin === "children" ? "bg-[#ffc105] bg-opacity-30 text-[#b48903]" : ""
+                    }`}
+                    onClick={() => setTypeOfLogIn("children")}
+                  >
+                    <i
+                      className={`bi bi-check mr-2 ${
+                        typeOfLogin === "children" ? "opacity-100" : "opacity-0"
+                      } `}
+                    ></i>
+                    Children Account
+                  </div>
+                  <div
+                    className={`px-[8px] py-[8px] w-full rounded-md relative duration-200 hover:bg-[#FFC105]/20 cursor-pointer flex items-center ${
+                      typeOfLogin === "pregnantwomen" ? "bg-[#ffc105] bg-opacity-30 text-[#b48903]" : ""
+                    }`}
+                    onClick={() => setTypeOfLogIn("pregnantwomen")}
+                  >
+                    <i
+                      className={`bi bi-check mr-2 ${
+                        typeOfLogin === "pregnantwomen" ? "opacity-100" : "opacity-0"
+                      } `}
+                    ></i>
+                    Pregnant Mother
+                  </div>
+                  <div
+                    className={`px-[8px] py-[8px] w-full rounded-md relative duration-200 hover:bg-[#FFC105]/20 cursor-pointer flex items-center ${
+                      typeOfLogin === "lactatingmother" ? "bg-[#ffc105] bg-opacity-30 text-[#b48903]" : ""
+                    }`}
+                    onClick={() => setTypeOfLogIn("lactatingmother")}
+                  >
+                    <i
+                      className={`bi bi-check mr-2 ${
+                        typeOfLogin === "lactatingmother" ? "opacity-100" : "opacity-0"
+                      } `}
+                    ></i>
+                    Lactating Mother
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      <p className="text-sm text-gray-600 mb-[24px]">
-        Use your benefiary id to login
-      </p>
-      <button
-        className="w-full text-[14px] bg-[#4CAF50] text-white py-[12px] px-[8px] rounded-md hover:opacity-50 mb-4"
-        onClick={() => logInUser()}
-      >
-        Continue
-      </button>
+        <p className="text-sm text-gray-600 mb-[24px]">
+          Use your beneficiary ID to login
+        </p>
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full text-[14px] bg-[#4CAF50] text-white py-[12px] px-[8px] rounded-md hover:opacity-90 mb-4 disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isLoading ? "Logging in..." : "Continue"}
+        </button>
+      </form>
     </div>
   );
 };
