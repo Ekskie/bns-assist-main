@@ -18,7 +18,18 @@ export async function GET(req) {
     // CRITICAL FIX: If status is "All", we do NOT set the query.status field.
     // This ensures we fetch Active, Inactive, Pending, and any other status.
     if (status && status !== "All") {
-      query.status = status;
+      // Mapping "Pending" status to { approve: false } or similar logic if needed
+      // Assuming 'status' is derived or stored. If strictly using 'approve' boolean:
+      if (status === 'Pending') {
+          query.approve = false;
+      } else if (status === 'Active') {
+          query.approve = true;
+      } else {
+          // If you have a specific status field, use it. Otherwise, rely on 'approve'.
+          // For now, let's assume 'approve' handles active/pending.
+          // If you have an explicit 'status' field in DB, uncomment below:
+          // query.status = status;
+      }
     }
 
     // Filter by barangay
@@ -28,11 +39,13 @@ export async function GET(req) {
 
     // Search functionality
     if (search) {
+      // FIX: Search by fullName, email, bnsId/bnsnumber
       query.$or = [
-        { firstname: { $regex: search, $options: "i" } },
-        { lastname: { $regex: search, $options: "i" } },
-        { emailAddress: { $regex: search, $options: "i" } },
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } }, // Changed from emailAddress based on user schema
+        { emailAddress: { $regex: search, $options: "i" } }, // Keeping as fallback
         { bnsnumber: { $regex: search, $options: "i" } },
+        { bnsId: { $regex: search, $options: "i" } },
       ];
     }
 

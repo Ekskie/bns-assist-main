@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
-import { useAddFormMutation, useGetFormsQuery } from "@/service/forms/formsApiSlice";
-import { Plus, Link as LinkIcon, FileText, Trash2, Pencil } from "lucide-react";
+// Changed from "@/service/forms/formsApiSlice" to relative path to fix build error
+import { useAddFormMutation, useGetFormsQuery } from "../../service/forms/formsApiSlice";
+import { Plus, Link as LinkIcon, FileText, Trash2, Pencil, ExternalLink } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function ManageFormTemplates() {
@@ -94,7 +95,7 @@ export default function ManageFormTemplates() {
               <div className="flex items-center gap-1 text-xs text-blue-600 bg-blue-50 p-2 rounded truncate mb-2">
                  <LinkIcon size={12} className="shrink-0" /> 
                  <a href={form.embeddedLink} target="_blank" rel="noreferrer" className="truncate hover:underline">
-                    Link
+                   Link
                  </a>
               </div>
 
@@ -131,7 +132,7 @@ export default function ManageFormTemplates() {
       {/* ADD/EDIT MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-lg w-full max-w-lg shadow-xl">
+          <div className="bg-white p-6 rounded-lg w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold mb-4">{editingForm ? "Edit Template" : "Add Template"}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -157,26 +158,52 @@ export default function ManageFormTemplates() {
               
               <div>
                 <label className="block text-sm font-medium mb-1">Embed Link (Google Sheet/Doc) <span className="text-red-500">*</span></label>
-                <input 
-                  className="w-full border p-2 rounded text-sm" 
-                  placeholder="https://docs.google.com/spreadsheets/..."
-                  value={formData.embeddedLink}
-                  onChange={e => setFormData({...formData, embeddedLink: e.target.value})}
-                  required
-                />
+                <div className="flex gap-2 mb-2">
+                    <input 
+                      className="w-full border p-2 rounded text-sm" 
+                      placeholder="https://docs.google.com/spreadsheets/..."
+                      value={formData.embeddedLink}
+                      onChange={e => setFormData({...formData, embeddedLink: e.target.value})}
+                      required
+                    />
+                    <a 
+                      href="https://sheets.new" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="shrink-0 bg-green-50 text-green-700 px-3 py-2 rounded text-sm font-medium hover:bg-green-100 flex items-center gap-1 border border-green-200 transition-colors"
+                      title="Create a new Google Sheet (opens in new tab)"
+                    >
+                      <Plus size={14} /> New Sheet
+                    </a>
+                </div>
+                
+                {/* Embed Preview */}
+                {formData.embeddedLink && (
+                  <div className="w-full h-64 border rounded bg-gray-50 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-1 bg-gray-100 rounded-bl text-[10px] text-gray-500 z-10">Preview</div>
+                    <iframe 
+                      src={formData.embeddedLink} 
+                      className="w-full h-full"
+                      title="Sheet Preview"
+                    />
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-500 mt-1">
+                  Note: Ensure the Google Sheet is published or shared correctly to be visible in the iframe.
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium mb-1">Documentation (Markdown)</label>
                 <textarea 
-                  className="w-full border p-2 rounded text-sm h-24" 
+                  className="w-full border p-2 rounded text-sm h-24 font-mono" 
                   value={formData.mdeText}
                   onChange={e => setFormData({...formData, mdeText: e.target.value})}
                   placeholder="# Instructions..."
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-6">
+              <div className="flex justify-end gap-2 mt-6 border-t pt-4">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}

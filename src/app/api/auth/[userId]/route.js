@@ -1,33 +1,99 @@
 import { NextResponse } from "next/server";
+import dbConnect from "@/lib/mongoose";
 import BnsUser from "@/model/BnsUser";
-import connectToDatabase from "@/lib/mongoose";
 
-export async function GET(request, context) {
-  await connectToDatabase();
-
-  // Fix: Await params as it is a promise in newer Next.js versions
-  const { userId } = await context.params;
-
-  if (!userId) {
-    return NextResponse.json(
-      { message: "User ID is required" },
-      { status: 400 }
-    );
-  }
-
+export async function PATCH(req, { params }) {
   try {
-    const user = await BnsUser.findById(userId);
+    await dbConnect();
+    
+    // Await params before using them (Required for Next.js 15+)
+    const { userId } = await params; 
+    
+    const body = await req.json();
 
-    if (!user) {
-      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    // Validate ID format before querying
+    if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
+        return NextResponse.json({ message: "Invalid User ID format" }, { status: 400 });
     }
 
-    return NextResponse.json(user, { status: 200 });
-  } catch (error) {
-    console.error("Error fetching user:", error);
+    // Find the user by ID and update fields
+    // We use { new: true } to return the updated document
+    const updatedUser = await BnsUser.findByIdAndUpdate(userId, body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedUser) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "User updated successfully", user: updatedUser },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
       { status: 500 }
     );
   }
+}
+
+export async function DELETE(req, { params }) {
+  try {
+    await dbConnect();
+    
+    const { userId } = await params; 
+
+    if (!userId || !userId.match(/^[0-9a-fA-F]{24}$/)) {
+        return NextResponse.json({ message: "Invalid User ID format" }, { status: 400 });
+    }
+
+    const deletedUser = await BnsUser.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return NextResponse.json(
+        { message: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(
+      { message: "User deleted successfully" },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(req, { params }) {
+     try {
+        await dbConnect();
+        
+        // Await params here as well
+        const { userId } = await params;
+
+        const user = await BnsUser.findById(userId);
+         if (!user) {
+            return NextResponse.json(
+                { message: "User not found" },
+                { status: 404 }
+            );
+        }
+        return NextResponse.json(user, { status: 200 });
+    } catch (error) {
+         return NextResponse.json(
+            { message: "Internal Server Error" },
+            { status: 500 }
+        );
+    }
 }

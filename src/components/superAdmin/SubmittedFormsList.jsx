@@ -1,13 +1,19 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { FileText, Eye, Download, Calendar, Filter, Trash2 } from "lucide-react";
+import { FileText, Eye, Download, Calendar, Filter, Trash2, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 
-export default function SubmittedFormsList() {
+export default function SubmittedFormsList({ barangayFilter = "All" }) {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("All");
+  const [filterBarangay, setFilterBarangay] = useState(barangayFilter);
   const [deletingId, setDeletingId] = useState(null);
+
+  // Sync local state if the prop changes
+  useEffect(() => {
+    setFilterBarangay(barangayFilter);
+  }, [barangayFilter]);
 
   useEffect(() => {
     const fetchForms = async () => {
@@ -30,14 +36,33 @@ export default function SubmittedFormsList() {
   // Extract unique form titles for the filter dropdown
   const formTypes = useMemo(() => {
     const types = new Set(forms.map((form) => form.formTitle));
-    return ["All", ...Array.from(types)];
+    return ["All", ...Array.from(types).sort()];
   }, [forms]);
 
-  // Filter forms based on selected type
+  // Extract unique Barangays for the filter dropdown
+  const barangayOptions = useMemo(() => {
+    // Get barangay from form data or the user who submitted it
+    const barangays = new Set(
+      forms
+        .map((form) => form.barangay || form.submittedBy?.barangay)
+        .filter((b) => b) // Filter out null/undefined/empty strings
+    );
+    return ["All", ...Array.from(barangays).sort()];
+  }, [forms]);
+
+  // Filter forms based on selected type AND selected barangay
   const filteredForms = useMemo(() => {
-    if (filterType === "All") return forms;
-    return forms.filter((form) => form.formTitle === filterType);
-  }, [forms, filterType]);
+    return forms.filter((form) => {
+      // 1. Filter by Form Type
+      const matchesType = filterType === "All" || form.formTitle === filterType;
+
+      // 2. Filter by Barangay
+      const formBarangay = form.barangay || form.submittedBy?.barangay;
+      const matchesBarangay = filterBarangay === "All" || formBarangay === filterBarangay;
+
+      return matchesType && matchesBarangay;
+    });
+  }, [forms, filterType, filterBarangay]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
@@ -69,7 +94,7 @@ export default function SubmittedFormsList() {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-50">
+      <div className="p-4 border-b border-gray-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-gray-50">
         <h3 className="font-semibold text-gray-800 flex items-center gap-2">
           <FileText size={18} className="text-blue-600" />
           Submitted Reports
@@ -77,26 +102,52 @@ export default function SubmittedFormsList() {
             Total: {filteredForms.length}
           </span>
         </h3>
-        
-        {/* Filter Dropdown */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <label htmlFor="docFilter" className="text-xs font-medium text-gray-500 flex items-center gap-1">
-            <Filter size={14} /> Filter:
-          </label>
-          <div className="relative flex-1 sm:flex-none">
-            <select
-              id="docFilter"
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="w-full sm:w-48 pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-            >
-              {formTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+
+        {/* Filters Container */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+          
+          {/* Barangay Filter */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label htmlFor="brgyFilter" className="text-xs font-medium text-gray-500 flex items-center gap-1 whitespace-nowrap">
+              <MapPin size={14} /> Barangay:
+            </label>
+            <div className="relative flex-1 sm:flex-none w-full sm:w-48">
+              <select
+                id="brgyFilter"
+                value={filterBarangay}
+                onChange={(e) => setFilterBarangay(e.target.value)}
+                className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+              >
+                {barangayOptions.map((brgy) => (
+                  <option key={brgy} value={brgy}>
+                    {brgy}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* Report Type Filter */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label htmlFor="docFilter" className="text-xs font-medium text-gray-500 flex items-center gap-1 whitespace-nowrap">
+              <Filter size={14} /> Type:
+            </label>
+            <div className="relative flex-1 sm:flex-none w-full sm:w-48">
+              <select
+                id="docFilter"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+              >
+                {formTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -115,7 +166,9 @@ export default function SubmittedFormsList() {
             {filteredForms.length === 0 ? (
               <tr>
                 <td colSpan="5" className="px-4 py-8 text-center text-gray-400">
-                  {filterType === "All" ? "No reports submitted yet." : `No reports found for "${filterType}".`}
+                  {filterType === "All" && filterBarangay === "All"
+                    ? "No reports submitted yet."
+                    : "No reports found matching the filters."}
                 </td>
               </tr>
             ) : (

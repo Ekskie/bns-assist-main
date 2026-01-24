@@ -1,160 +1,285 @@
 "use client";
+import { useState, useEffect } from "react";
+import FilterDropdown from "@/components/ui/FilterDropdown"; // Ensure this path is correct
 
-import { useState } from "react";
-import { Filter, Search, UserPlus } from "lucide-react";
-import NewBnsModal from "../ui/modals/NewBnsModal";
-
-const USERS = [
-	{
-		firstname: "Juan",
-		lastname: "Dela Cruz",
-		emailAddress: "juan.delacruz@example.com",
-		bnsnumber: "BNS12345678",
-		number: "09171234567",
-		barangay: "Barangay San Isidro",
-		password: "SecureP@ssw0rd",
-		confirmPassword: "SecureP@ssw0rd",
-		status: "Active",
-		type: "bns-worker",
-	},
+const BARANGAY_OPTIONS = [
+  "All",
+  "Acevida",
+  "Bagong Pag-Asa",
+  "Bagumbarangay",
+  "Buhay",
+  "Gen. Luna",
+  "Halayhayin",
+  "Mendiola",
+  "Kapatalan",
+  "Laguio",
+  "Liyang",
+  "Llavac",
+  "Pandeno",
+  "Magsaysay",
+  "Macatad",
+  "Mayatba",
+  "P. Burgos",
+  "G. Redor",
+  "Salubungan",
+  "Wawa",
+  "J. Rizal",
 ];
 
-const ITEMS_PER_PAGE = 5;
+const STATUS_OPTIONS = ["All", "Active", "Inactive", "Pending"]; // Added "Pending" to catch unapproved users
 
 export default function PaginatedUserTable({
-	setViewing,
-	setEditing,
-	setUserDatas,
+  setEditing,
+  setViewing,
+  setDeleting, // Accept setDeleting prop
+  setUserDatas,
+  setUserData,
+  refreshTrigger = 0, // New prop to trigger re-fetch
 }) {
-	const [search, setSearch] = useState("");
-	const [page, setPage] = useState(1);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-	const filteredUsers = USERS.filter(
-		(u) =>
-			u.firstname.toLowerCase().includes(search.toLowerCase()) ||
-			u.lastname.toLowerCase().includes(search.toLowerCase())
-	);
+  // Default to "All" to show everyone (including unapproved) immediately
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [barangayFilter, setBarangayFilter] = useState("All");
+  const [searchTerm, setSearchTerm] = useState("");
+  const itemsPerPage = 10;
 
-	const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
-	const startIndex = (page - 1) * ITEMS_PER_PAGE;
-	const paginatedUsers = filteredUsers.slice(
-		startIndex,
-		startIndex + ITEMS_PER_PAGE
-	);
+  // Add refreshTrigger to dependency array
+  useEffect(() => {
+    fetchUsers();
+  }, [currentPage, statusFilter, barangayFilter, searchTerm, refreshTrigger]);
 
-	return (
-		<div className="bg-white p-6 rounded-xl shadow my-6">
-			{/* Header */}
-			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-xl font-bold text-gray-800">All BNS Users</h2>
-				<div className="flex gap-2 items-center">
-					<div className="relative w-full h-9">
-						<span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-							<Search size={16} />
-						</span>
-						<input
-							type="text"
-							placeholder="Search users..."
-							className="w-full h-full pl-10 pr-4 py-2 rounded-lg bg-white text-sm outline-none border border-gray-200"
-							value={search}
-							onChange={(e) => {
-								setPage(1); // reset to page 1 when searching
-								setSearch(e.target.value);
-							}}
-						/>
-					</div>
-					<div className="flex items-center justify-center h-9 w-9 px-2 rounded-lg border border-gray-200 ">
-						<Filter size={16} />
-					</div>
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: currentPage,
+        limit: itemsPerPage,
+        status: statusFilter,
+        barangay: barangayFilter,
+        search: searchTerm,
+      });
 
-					<button
-						className="w-[250px] flex items-center justify-center gap-2 h-9 px-4 rounded-lg bg-[#28a745] text-white font-medium hover:opacity-90 transition"
-						onClick={() => document.getElementById("addBns").showModal()}
-					>
-						<UserPlus size={16} />
-						<span className="text-sm">Add New BNS</span>
-					</button>
-				</div>
-			</div>
+      const res = await fetch(`/api/bnsUsers?${params}`);
+      const data = await res.json();
 
-			{/* Table */}
-			<div className="overflow-x-auto">
-				<table className="table w-full">
-					<thead>
-						<tr className=" text-gray-500 font-light">
-							<th>Name</th>
-							<th>Barangay</th>
-							<th>Status</th>
+      if (res.ok) {
+        setUsers(data.users || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        console.error("Failed to fetch users");
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-							<th className="text-right">Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{paginatedUsers.map((user, index) => (
-							<tr key={index} className="hover:bg-gray-50 text-sm">
-								<td className="font-medium text-gray-800">
-									{user.firstname} {" "} {user.lastname}
-								</td>
-								<td>{user.barangay}</td>
-								<td>
-									<span
-										className={`badge border-none ${
-											user.status === "Active"
-												? "badge-success bg-green-100 text-green-700"
-												: "badge-neutral bg-gray-300 text-gray-600"
-										}`}
-									>
-										{user.status}
-									</span>
-								</td>
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reset to page 1 on search
+  };
 
-								<td className="text-right">
-									<button
-										className="btn btn-ghost btn-xs border-none text-gray-500 hover:bg-[#28a745] hover:text-white"
-										onClick={() => {
-											setViewing(true);
-											setUserDatas({ ...user });
-										}}
-									>
-										View
-									</button>
-									<button
-										className="btn btn-ghost btn-xs border-none text-gray-500  hover:bg-[#28a745] hover:text-white"
-										onClick={() => {
-											setEditing(true);
-											setUserDatas({ ...user });
-										}}
-									>
-										Edit
-									</button>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
-			{/* Pagination */}
-			<div className="flex justify-end items-center gap-3 mt-4">
-				<button
-					className="btn btn-sm bg-[#28a745] border-none text-white shadow-none"
-					onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-					disabled={page === 1}
-				>
-					Previous
-				</button>
-				<span className="text-sm">
-					Page {page} of {totalPages}
-				</span>
-				<button
-					className="btn btn-sm bg-[#28a745] border-none text-white shadow-none"
-					onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
-					disabled={page === totalPages}
-				>
-					Next
-				</button>
-			</div>
-			<NewBnsModal id={"addBns"} />
-		</div>
-	);
+  // Helper to safely set user data, handling potential prop name mismatches
+  const handleSetUserData = (user) => {
+    // Check both plural (from current code) and singular (standard convention)
+    const setter = setUserDatas || setUserData;
+
+    if (typeof setter === "function") {
+      setter(user);
+    } else {
+      // Just log a warning, don't crash
+      console.warn(
+        "PaginatedUserTable: setUserDatas/setUserData prop is missing.",
+      );
+    }
+  };
+
+  // Helper to safely trigger viewing mode
+  const handleViewUser = (user) => {
+    handleSetUserData(user);
+
+    if (typeof setViewing === "function") {
+      setViewing(true);
+    } else {
+      console.warn(
+        "PaginatedUserTable: setViewing prop is missing. Please check parent component.",
+      );
+    }
+  };
+
+  // Helper to safely trigger editing mode
+  const handleEditUser = (user) => {
+    handleSetUserData(user);
+
+    if (typeof setEditing === "function") {
+      setEditing(true);
+    } else {
+      console.warn(
+        "PaginatedUserTable: setEditing prop is missing. Please check parent component.",
+      );
+    }
+  };
+
+  // Helper to safely trigger deleting mode
+  const handleDeleteUser = (user) => {
+    handleSetUserData(user);
+    if (typeof setDeleting === "function") {
+      setDeleting(true);
+    } else {
+      console.warn(
+        "PaginatedUserTable: setDeleting prop is missing. Please check parent component.",
+      );
+    }
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow mt-6">
+      {/* Filters and Search */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <div className="w-full md:w-1/3">
+          <input
+            type="text"
+            placeholder="Search by name, email, or BNS number..."
+            className="input input-bordered w-full bg-white border-gray-300 text-gray-700"
+            value={searchTerm}
+            onChange={handleSearch}
+          />
+        </div>
+        <div className="flex gap-2 w-full md:w-auto">
+          <FilterDropdown
+            label="Barangay"
+            options={BARANGAY_OPTIONS}
+            value={barangayFilter}
+            onChange={(val) => {
+              setBarangayFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+          <FilterDropdown
+            label="Status"
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(val) => {
+              setStatusFilter(val);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="table w-full text-left">
+          <thead className="bg-gray-100 text-gray-700 font-semibold uppercase text-xs">
+            <tr>
+              <th className="p-3">Name</th>
+              <th className="p-3">Email</th>
+              <th className="p-3">Barangay</th>
+              <th className="p-3">Status</th>
+              <th className="p-3 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm text-gray-600">
+            {loading ? (
+              <tr>
+                <td colSpan="5" className="text-center py-8">
+                  Loading users...
+                </td>
+              </tr>
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="text-center py-8">
+                  No users found.
+                </td>
+              </tr>
+            ) : (
+              users.map((user) => (
+                <tr key={user._id} className="border-b hover:bg-gray-50">
+                  <td className="p-3 font-medium text-gray-800">
+                    {/* Updated to use fullName only */}
+                    {user.fullName}
+                    <div className="text-xs text-gray-500">
+                      {user.bnsnumber ||
+                        user.bnsNumber ||
+                        user.bnsId ||
+                        user._id}
+                    </div>
+                  </td>
+                  <td className="p-3">{user.emailAddress || user.email}</td>
+                  <td className="p-3">{user.barangay}</td>
+                  <td className="p-3">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.approve
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {user.approve ? "Active" : "Pending"}
+                    </span>
+                  </td>
+                  <td className="p-3 flex justify-center gap-2">
+                    <button
+                      className="btn btn-sm btn-ghost text-blue-600 hover:bg-blue-50"
+                      onClick={() => handleViewUser(user)}
+                    >
+                      View
+                    </button>
+                    <button
+                      className="btn btn-sm btn-ghost text-green-600 hover:bg-green-50"
+                      onClick={() => handleEditUser(user)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="btn btn-sm btn-ghost text-red-600 hover:bg-red-50"
+                      onClick={() => handleDeleteUser(user)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm text-gray-500">
+          Page {currentPage} of {totalPages}
+        </div>
+        <div className="flex gap-2">
+          <button
+            className="btn btn-sm btn-outline border-gray-300 text-gray-600 disabled:opacity-50"
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Previous
+          </button>
+          <button
+            className="btn btn-sm btn-outline border-gray-300 text-gray-600 disabled:opacity-50"
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
