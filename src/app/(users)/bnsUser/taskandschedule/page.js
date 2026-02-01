@@ -351,12 +351,12 @@ const TaskSchedule = () => {
                         >
                             View
                         </button>
-                        <button
+                        {/* <button
                             onClick={() => handleDeleteDiary(d._id)}
                             className="text-red-500 hover:text-red-700 font-medium text-sm hover:underline"
                         >
                             Delete
-                        </button>
+                        </button> */}
                       </div>
                     </td>
                   </tr>

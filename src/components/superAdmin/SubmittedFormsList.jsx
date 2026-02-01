@@ -1,14 +1,24 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
-import { FileText, Eye, Download, Calendar, Filter, Trash2, MapPin } from "lucide-react";
+import { FileText, Eye, Calendar, Filter, Trash2, MapPin, X, FileSearch, Clock, FileDown, Loader2, FileBarChart } from "lucide-react";
 import toast from "react-hot-toast";
+
+const MONTHS = [
+  "All",
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 export default function SubmittedFormsList({ barangayFilter = "All" }) {
   const [forms, setForms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState("All");
+  const [filterMonth, setFilterMonth] = useState("All");
   const [filterBarangay, setFilterBarangay] = useState(barangayFilter);
   const [deletingId, setDeletingId] = useState(null);
+  const [viewingForm, setViewingForm] = useState(null);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [generatingConsolidated, setGeneratingConsolidated] = useState(false);
 
   // Sync local state if the prop changes
   useEffect(() => {
@@ -33,36 +43,33 @@ export default function SubmittedFormsList({ barangayFilter = "All" }) {
     fetchForms();
   }, []);
 
-  // Extract unique form titles for the filter dropdown
   const formTypes = useMemo(() => {
     const types = new Set(forms.map((form) => form.formTitle));
     return ["All", ...Array.from(types).sort()];
   }, [forms]);
 
-  // Extract unique Barangays for the filter dropdown
   const barangayOptions = useMemo(() => {
-    // Get barangay from form data or the user who submitted it
     const barangays = new Set(
       forms
         .map((form) => form.barangay || form.submittedBy?.barangay)
-        .filter((b) => b) // Filter out null/undefined/empty strings
+        .filter((b) => b)
     );
     return ["All", ...Array.from(barangays).sort()];
   }, [forms]);
 
-  // Filter forms based on selected type AND selected barangay
   const filteredForms = useMemo(() => {
     return forms.filter((form) => {
-      // 1. Filter by Form Type
       const matchesType = filterType === "All" || form.formTitle === filterType;
-
-      // 2. Filter by Barangay
       const formBarangay = form.barangay || form.submittedBy?.barangay;
       const matchesBarangay = filterBarangay === "All" || formBarangay === filterBarangay;
+      
+      const submissionDate = new Date(form.submissionDate);
+      const submissionMonth = MONTHS[submissionDate.getMonth() + 1];
+      const matchesMonth = filterMonth === "All" || submissionMonth === filterMonth;
 
-      return matchesType && matchesBarangay;
+      return matchesType && matchesBarangay && matchesMonth;
     });
-  }, [forms, filterType, filterBarangay]);
+  }, [forms, filterType, filterBarangay, filterMonth]);
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this report? This action cannot be undone.")) {
@@ -90,64 +97,135 @@ export default function SubmittedFormsList({ barangayFilter = "All" }) {
     }
   };
 
+  const handleGenerateReport = async (type) => {
+    // type can be "Form1B" or "Consolidated"
+    const isConsolidated = type === "Consolidated";
+    const setLoading = isConsolidated ? setGeneratingConsolidated : setGeneratingReport;
+    const reportTypeParam = isConsolidated ? "OPT Plus Form 2B" : "OPT Plus Form 1B";
+    const fileNamePrefix = isConsolidated ? "OPT_Plus_Form_2B" : "Consolidated_OPT_Plus_Form_1B";
+
+    setLoading(true);
+    try {
+      const params = {
+        reportType: reportTypeParam
+      };
+      if (filterMonth !== "All") params.month = filterMonth;
+      if (filterBarangay !== "All") params.barangay = filterBarangay;
+      
+      const queryParams = new URLSearchParams(params);
+
+      const res = await fetch(`/api/superAdmin/report/generate?${queryParams}`);
+      
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to generate report");
+      }
+
+      if (!res.ok) {
+        throw new Error(`Server Error: ${res.statusText}`);
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const monthLabel = filterMonth === "All" ? "All_Months" : filterMonth;
+      const barangayLabel = filterBarangay === "All" ? "All_Barangays" : filterBarangay;
+      a.download = `${fileNamePrefix}_${monthLabel}_${barangayLabel}.xlsx`;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`${isConsolidated ? "Summary" : "Consolidated"} report generated!`);
+    } catch (error) {
+      console.error("Generation error:", error);
+      toast.error(error.message); 
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderFilePreview = (form) => {
+    const url = form.fileUrl;
+    if (!url) return <div className="text-gray-500 text-center p-8">No file URL provided.</div>;
+    const extension = url.split('.').pop().toLowerCase();
+
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
+      return (
+        <div className="flex flex-col items-center gap-4 w-full p-4">
+          <img src={url} alt={form.formTitle} className="max-w-full h-auto rounded-lg shadow-lg border" />
+          <p className="text-xs text-gray-400">Image Preview</p>
+        </div>
+      );
+    }
+    if (extension === 'pdf') {
+      return <iframe src={`${url}#toolbar=0&navpanes=0`} className="w-full h-full rounded-lg border-0" title="PDF Viewer" />;
+    }
+    if (['xlsx', 'xls', 'csv', 'doc', 'docx'].includes(extension)) {
+      const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+      return <iframe src={googleViewerUrl} className="w-full h-full rounded-lg border-0 bg-white" title="Document Viewer" />;
+    }
+    return <iframe src={url} className="w-full h-full rounded-lg border-0" title="File Viewer" />;
+  };
+
   if (loading) return <div className="p-4 text-center text-gray-500">Loading submitted forms...</div>;
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-100 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-gray-50">
-        <h3 className="font-semibold text-gray-800 flex items-center gap-2">
-          <FileText size={18} className="text-blue-600" />
-          Submitted Reports
-          <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border ml-2">
-            Total: {filteredForms.length}
-          </span>
-        </h3>
-
-        {/* Filters Container */}
-        <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+      <div className="p-4 border-b border-gray-100 flex flex-col gap-4 bg-gray-50">
+        
+        {/* Top Row: Title & Buttons */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+            <FileText size={18} className="text-blue-600" />
+            Submitted Reports
+            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border ml-2">Total: {filteredForms.length}</span>
+          </h3>
           
-          {/* Barangay Filter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label htmlFor="brgyFilter" className="text-xs font-medium text-gray-500 flex items-center gap-1 whitespace-nowrap">
-              <MapPin size={14} /> Barangay:
-            </label>
-            <div className="relative flex-1 sm:flex-none w-full sm:w-48">
-              <select
-                id="brgyFilter"
-                value={filterBarangay}
-                onChange={(e) => setFilterBarangay(e.target.value)}
-                className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-              >
-                {barangayOptions.map((brgy) => (
-                  <option key={brgy} value={brgy}>
-                    {brgy}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={() => handleGenerateReport("Form1B")}
+              disabled={generatingReport || generatingConsolidated}
+              className={`flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition shadow-sm ${generatingReport ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {generatingReport ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
+              {generatingReport ? "Generating..." : "Generate Masterlist (Form 1B)"}
+            </button>
 
-          {/* Report Type Filter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <label htmlFor="docFilter" className="text-xs font-medium text-gray-500 flex items-center gap-1 whitespace-nowrap">
-              <Filter size={14} /> Type:
-            </label>
-            <div className="relative flex-1 sm:flex-none w-full sm:w-48">
-              <select
-                id="docFilter"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value)}
-                className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-              >
-                {formTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <button 
+              onClick={() => handleGenerateReport("Consolidated")}
+              disabled={generatingReport || generatingConsolidated}
+              className={`flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition shadow-sm ${generatingConsolidated ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {generatingConsolidated ? <Loader2 size={16} className="animate-spin" /> : <FileBarChart size={16} />}
+              {generatingConsolidated ? "Generating..." : "Generate OPT Consolidated"}
+            </button>
           </div>
+        </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap gap-4 w-full">
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:flex-none">
+            <label className="text-xs font-medium text-gray-500 flex items-center gap-1"><Clock size={14} /> Month:</label>
+            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="w-full pl-3 pr-8 py-1.5 text-sm border rounded-md">
+              {MONTHS.map((month) => <option key={month} value={month}>{month}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:flex-none">
+            <label className="text-xs font-medium text-gray-500 flex items-center gap-1"><MapPin size={14} /> Barangay:</label>
+            <select value={filterBarangay} onChange={(e) => setFilterBarangay(e.target.value)} className="w-full pl-3 pr-8 py-1.5 text-sm border rounded-md">
+              {barangayOptions.map((brgy) => <option key={brgy} value={brgy}>{brgy}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 flex-1 min-w-[200px] sm:flex-none">
+            <label className="text-xs font-medium text-gray-500 flex items-center gap-1"><Filter size={14} /> Type:</label>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="w-full pl-3 pr-8 py-1.5 text-sm border rounded-md">
+              {formTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -164,56 +242,18 @@ export default function SubmittedFormsList({ barangayFilter = "All" }) {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {filteredForms.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-4 py-8 text-center text-gray-400">
-                  {filterType === "All" && filterBarangay === "All"
-                    ? "No reports submitted yet."
-                    : "No reports found matching the filters."}
-                </td>
-              </tr>
+              <tr><td colSpan="5" className="px-4 py-8 text-center text-gray-400">No reports found.</td></tr>
             ) : (
               filteredForms.map((form) => (
                 <tr key={form._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">
-                    {form.formTitle}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {form.submittedBy?.fullName || "Unknown User"}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {form.barangay || form.submittedBy?.barangay}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar size={12} />
-                      {new Date(form.submissionDate).toLocaleDateString()}
-                    </div>
-                  </td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{form.formTitle}</td>
+                  <td className="px-4 py-3 text-gray-600">{form.submittedBy?.fullName || "Unknown"}</td>
+                  <td className="px-4 py-3 text-gray-600">{form.barangay || form.submittedBy?.barangay}</td>
+                  <td className="px-4 py-3 text-gray-500"><div className="flex items-center gap-1"><Calendar size={12} />{new Date(form.submissionDate).toLocaleDateString()}</div></td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
-                      <a
-                        href={form.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-xs font-medium transition-colors"
-                        title="View Report"
-                      >
-                        <Eye size={14} /> View
-                      </a>
-                      <button
-                        onClick={() => handleDelete(form._id)}
-                        disabled={deletingId === form._id}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 text-xs font-medium transition-colors disabled:opacity-50"
-                        title="Delete Report"
-                      >
-                        {deletingId === form._id ? (
-                          <span className="loading loading-spinner loading-xs"></span>
-                        ) : (
-                          <>
-                            <Trash2 size={14} /> Delete
-                          </>
-                        )}
-                      </button>
+                      <button onClick={() => setViewingForm(form)} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 text-xs font-medium"><Eye size={14} /> View</button>
+                      <button onClick={() => handleDelete(form._id)} disabled={deletingId === form._id} className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-50 text-red-600 rounded-md hover:bg-red-100 text-xs font-medium"><Trash2 size={14} /> Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -222,6 +262,22 @@ export default function SubmittedFormsList({ barangayFilter = "All" }) {
           </tbody>
         </table>
       </div>
+
+      {viewingForm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-900">{viewingForm.formTitle}</h3>
+              <button onClick={() => setViewingForm(null)}><X size={20} /></button>
+            </div>
+            <div className="flex-1 bg-gray-200 overflow-auto flex items-center justify-center p-4 relative">
+              <div className="w-full h-full max-w-4xl bg-white rounded shadow-sm flex items-center justify-center">
+                {renderFilePreview(viewingForm)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
