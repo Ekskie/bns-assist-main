@@ -127,8 +127,11 @@ export async function GET(req) {
                         
                         // Calculate Age in Months
                         let ageInMonths = 0;
-                        if (child.dateOfBirth && bestEntry.date) {
-                            const dob = new Date(child.dateOfBirth);
+                        // Handle inconsistent naming: birthDate (schema) vs dateOfBirth (legacy)
+                        const dobRaw = child.birthDate || child.dateOfBirth;
+                        
+                        if (dobRaw && bestEntry.date) {
+                            const dob = new Date(dobRaw);
                             const measured = new Date(bestEntry.date);
                             const diffTime = measured - dob;
                             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -156,7 +159,7 @@ export async function GET(req) {
                         // WFA
                         mapStatus("WFA - SUW", "severely underweight");
                         mapStatus("WFA - MUW", "underweight");
-                        if (!statusRaw.includes("underweight")) mapStatus("WFA - Normal", "normal"); // simple fallback logic
+                        if (!statusRaw.includes("underweight")) mapStatus("WFA - Normal", "normal"); 
                         mapStatus("WFA - OW", "overweight");
                         mapStatus("WFA - Ob", "obese");
 
@@ -208,11 +211,14 @@ export async function GET(req) {
                     Object.entries(ages).forEach(([ag, v]) => {
                         const [mCol, fCol, tCol] = AGE_COL_MAP[ag];
                         
-                        // Add to existing value (in case template has 0s or formulas, though usually raw data overwrites)
-                        // Or just overwrite
-                        worksheet.getCell(`${mCol}${row}`).value = v.M;
-                        worksheet.getCell(`${fCol}${row}`).value = v.F;
-                        worksheet.getCell(`${tCol}${row}`).value = v.M + v.F;
+                        // Use existing value or 0
+                        const currentM = worksheet.getCell(`${mCol}${row}`).value;
+                        const currentF = worksheet.getCell(`${fCol}${row}`).value;
+                        const currentT = worksheet.getCell(`${tCol}${row}`).value;
+
+                        worksheet.getCell(`${mCol}${row}`).value = (Number(currentM) || 0) + v.M;
+                        worksheet.getCell(`${fCol}${row}`).value = (Number(currentF) || 0) + v.F;
+                        worksheet.getCell(`${tCol}${row}`).value = (Number(currentT) || 0) + v.M + v.F;
                     });
                 });
             }
@@ -228,7 +234,7 @@ export async function GET(req) {
         } 
         
         // ------------------------------------------------------------
-        // Logic for Form 1B (Individual List) - EXISTING LOGIC
+        // Logic for Form 1B (Individual List)
         // ------------------------------------------------------------
         else {
             const excelRows = [];
@@ -269,8 +275,18 @@ export async function GET(req) {
                         // Normalize fields: Check common variations
                         const childName = child.fullName || child.childName || child.name || "Unknown";
                         const childSex = child.sex || child.gender || "-";
-                        const childDobRaw = child.dateOfBirth || child.dob || child.birthDate || child.birthday;
+                        
+                        // NEW: Capture Mother Name
+                        const motherName = child.mother || "-";
+
+                        // Check updated schema field first (birthDate), then legacy (dateOfBirth)
+                        const childDobRaw = child.birthDate || child.dateOfBirth || child.dob || child.birthday;
                         const childAddress = child.address || child.barangay || "-";
+
+                        // NEW: Capture IP, Disability, Edema
+                        const isIndigenous = child.isIndigenous ? "Yes" : "No";
+                        const hasDisability = child.hasDisability ? "Yes" : "No";
+                        const hasEdema = bestEntry.hasEdema ? "Yes" : "No";
 
                         let ageInMonths = "-";
                         if (childDobRaw && bestEntry.date) {
@@ -290,7 +306,12 @@ export async function GET(req) {
                             height: bestEntry.heightCm || "-",
                             age: ageInMonths,
                             status: bestEntry.status || "-",
-                            barangay: childAddress
+                            barangay: childAddress,
+                            // NEW FIELDS
+                            mother: motherName,
+                            ip: isIndigenous,
+                            disability: hasDisability,
+                            edema: hasEdema
                         });
                     }
                 }
@@ -306,6 +327,7 @@ export async function GET(req) {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Consolidated Report");
 
+            // Updated Columns to include new data
             worksheet.columns = [
               { header: "Seq", key: "seq", width: 5 },
               { header: "Name of Child", key: "name", width: 25 },
@@ -317,6 +339,11 @@ export async function GET(req) {
               { header: "Age (mos)", key: "age", width: 10 },
               { header: "Status", key: "status", width: 20 },
               { header: "Address", key: "barangay", width: 25 },
+              // NEW HEADERS
+              { header: "Mother", key: "mother", width: 25 },
+              { header: "IP", key: "ip", width: 8 },
+              { header: "Disability", key: "disability", width: 10 },
+              { header: "Edema", key: "edema", width: 8 },
             ];
 
             const headerRow = worksheet.getRow(1);
