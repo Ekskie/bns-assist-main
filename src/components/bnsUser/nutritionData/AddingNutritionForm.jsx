@@ -23,10 +23,14 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
     email: "",
     address: "",
     number: "",
+    // --- NEW FIELDS ---
+    isIndigenous: false,
+    hasDisability: false,
     information: {
       weightKg: 0,
       heightCm: 0,
       muacCm: 0,
+      hasEdema: false, // --- NEW FIELD ---
       date: "",
       recommendation: [],
     },
@@ -44,6 +48,27 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
         [name]: value,
       };
     });
+  };
+
+  /* Checkbox Handler for Demographics */
+  const setCheckboxData = (e) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: checked,
+    }));
+  };
+
+  /* Checkbox Handler for Measurements (Edema) */
+  const setInfoCheckboxData = (e) => {
+    const { name, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      information: {
+        ...prev.information,
+        [name]: checked,
+      },
+    }));
   };
 
   /* Set gender */
@@ -282,6 +307,10 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
       date: dateNow, // Use generated ISO date
       address: formData.address,
       recommendation: formData.information.recommendation,
+      // --- NEW FIELDS IN PAYLOAD ---
+      isIndigenous: formData.isIndigenous,
+      hasDisability: formData.hasDisability,
+      hasEdema: formData.information.hasEdema, 
     };
 
     console.log("Preparing to send data payload:", dataToSend);
@@ -462,6 +491,37 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
           </div>
         </div>
 
+        {/* NEW: Additional Demographics Checkboxes */}
+        <div className="w-full flex gap-[24px] mb-[24px]">
+          <div className="flex items-center gap-3 w-1/2">
+            <input
+              type="checkbox"
+              id="isIndigenous"
+              name="isIndigenous"
+              checked={formData.isIndigenous}
+              onChange={setCheckboxData}
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+            />
+            <label htmlFor="isIndigenous" className="text-sm font-medium cursor-pointer">
+              Is member of Indigenous People (IP)?
+            </label>
+          </div>
+          
+          <div className="flex items-center gap-3 w-1/2">
+            <input
+              type="checkbox"
+              id="hasDisability"
+              name="hasDisability"
+              checked={formData.hasDisability}
+              onChange={setCheckboxData}
+              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+            />
+            <label htmlFor="hasDisability" className="text-sm font-medium cursor-pointer">
+              Child has Disability?
+            </label>
+          </div>
+        </div>
+
         {/* Nutrition Measurements */}
 
         <h3 className="text-lg font-semibold mb-[24px]">
@@ -470,7 +530,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
 
         {/* INPUT 5 */}
         <div className="w-full flex gap-[24px] mb-[24px]">
-          <div className="w-[33.33%]">
+          <div className="w-[25%]">
             <label htmlFor="weight" className="text-sm font-medium">
               Weight (kg)
             </label>
@@ -486,7 +546,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
             />
           </div>
 
-          <div className="w-[33.33%]">
+          <div className="w-[25%]">
             <label htmlFor="height" className="text-sm font-medium">
               Height (cm)
             </label>
@@ -502,7 +562,7 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
             />
           </div>
 
-          <div className="w-[33.33%]">
+          <div className="w-[25%]">
             <label htmlFor="muac" className="text-sm font-medium">
               MUAC (cm) - Optional
             </label>
@@ -516,6 +576,23 @@ const AddingNutritionForm = ({ setOpen, formStatus }) => {
               onChange={(e) => setNumberData(e)}
               name="muacCm"
             />
+          </div>
+
+          <div className="w-[25%] flex items-center pt-6">
+             {/* NEW: Edema Checkbox */}
+             <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="hasEdema"
+                name="hasEdema"
+                checked={formData?.information?.hasEdema}
+                onChange={setInfoCheckboxData}
+                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="hasEdema" className="text-sm font-medium cursor-pointer">
+                Has Edema?
+              </label>
+            </div>
           </div>
         </div>
 

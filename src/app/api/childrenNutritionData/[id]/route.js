@@ -46,28 +46,51 @@ export async function PUT(request, context) {
     const { id } = await context.params;
     const body = await request.json();
 
-    // Exclude 'information' array from direct profile update to avoid overwriting history unintentionally
-    // unless the frontend sends the whole object correctly. 
-    // Ideally, we just update top-level fields here.
-    const { name, mother, birthDate, gender, address, email, number } = body;
+    console.log("📝 PUT Request received at [id]/route.js for ID:", id);
+    console.log("📦 Body:", body);
+
+    // Extract fields from body
+    const {
+      name,
+      mother,
+      birthDate,
+      gender,
+      address,
+      email,
+      number,
+      // 👇 Capture new fields
+      isIndigenous,
+      hasDisability,
+    } = body;
+
+    // Build the update object carefully
+    const updateData = {
+      name,
+      mother,
+      birthDate,
+      gender,
+      address,
+      email,
+      number,
+      // 👇 Only add these if they exist in the request body
+      // This prevents overwriting with 'undefined' if not sent
+      ...(isIndigenous !== undefined && { isIndigenous }),
+      ...(hasDisability !== undefined && { hasDisability }),
+    };
+
+    console.log("🛠️ Updating with data:", updateData);
 
     const updatedChild = await ChildrenNutritionData.findByIdAndUpdate(
       id,
-      {
-        name,
-        mother,
-        birthDate,
-        gender,
-        address,
-        email,
-        number,
-      },
+      { $set: updateData }, // Use $set to be explicit
       { new: true }
     );
 
     if (!updatedChild) {
       return NextResponse.json({ message: "Child not found" }, { status: 404 });
     }
+
+    console.log("✅ Update Success:", updatedChild);
 
     return NextResponse.json(updatedChild);
   } catch (error) {

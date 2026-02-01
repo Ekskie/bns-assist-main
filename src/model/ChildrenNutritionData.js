@@ -16,10 +16,9 @@ const ChildrenDataScheme = new mongoose.Schema(
     },
     gender: {
       type: String,
-      enum: ["male", "female"],
+      enum: ["male", "female", "Male", "Female"],
       required: true,
     },
-
     address: {
       type: String,
       required: true,
@@ -49,6 +48,15 @@ const ChildrenDataScheme = new mongoose.Schema(
     imgUrl: {
       type: String,
     },
+    // --- NEW FIELDS ---
+    isIndigenous: { 
+      type: Boolean, 
+      default: false 
+    }, 
+    hasDisability: { 
+      type: Boolean, 
+      default: false 
+    },
     information: [
       {
         weightKg: {
@@ -65,6 +73,11 @@ const ChildrenDataScheme = new mongoose.Schema(
         },
         status: {
           type: String,
+        },
+        // --- NEW FIELD ---
+        hasEdema: { 
+          type: Boolean, 
+          default: false 
         },
         recommendation: [
           {
@@ -88,7 +101,6 @@ const ChildrenDataScheme = new mongoose.Schema(
   }
 );
 
-// ✅ Check if model already exists before creating to prevent overwrite errors in dev
 const ChildrenNutritionData =
   mongoose.models.ChildrenNutritionData ||
   mongoose.model("ChildrenNutritionData", ChildrenDataScheme);
